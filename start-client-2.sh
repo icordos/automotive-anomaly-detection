@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# $1 captures the first parameter you type after the script name
+# run first the script with upload then after all clients are ran with eval
+MODE=$1
+
+# Optional: Check if the user actually provided a mode
+if [ -z "$MODE" ]; then
+  echo "Error: You must provide a mode. Usage: ./start-client-1.sh <mode>"
+  exit 1
+fi
+
+python ./src/federated/client_sequential.py \
+    --mode "$MODE" \
+    --client-id 2 \
+    --categories pipe_staple tank_screw \
+    --server-host 10.205.0.116 --server-port 8081 \
+    --dataset-root data/raw \
+    --output-dir artifacts/clients \
+    --image-size 512 --batch-size 4 --num-workers 4 \
+    --coreset-method kcenter --coreset-ratio 0.1 --coreset-max-samples 5000 \
+    --coreset-chunk-size 16384 --distance-chunk-size 8192 \
+    --train-partition-id 0 --train-num-partitions 2 \
+    --device mps --log-level INFO
