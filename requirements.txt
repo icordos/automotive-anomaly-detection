@@ -1,0 +1,7 @@
+flwr
+numpy
+Pillow
+scikit-learn
+torch
+torchvision
+tqdm
