@@ -205,3 +205,17 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# macOS
+.DS_Store
+
+# LaTeX build artifacts
+paper/report-1.aux
+paper/report-1.bbl
+paper/report-1.blg
+paper/report-1.out
+paper/report-1.pdf
+paper/report-1.synctex.gz
+
+# Data downloads/extracts
+data/
