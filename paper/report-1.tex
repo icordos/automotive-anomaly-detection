@@ -464,6 +464,18 @@ The two figures below visualize the comparisons between the first federated impl
 \end{figure}
 \FloatBarrier
 
+\section{Privacy}
+\subsection{Differential Privacy}
+
+First introduced by \citep{Dwork2006Calibrating} we implement differential privacy at the client before sending features to the server, so each client's contribution is bounded and noisy.
+\begin{itemize}
+  \item \textbf{Where it happens:} after the client builds a per-category memory bank (coreset), but before upload.
+  \item \textbf{Clip:} for each category, clip each feature vector to a fixed $L_2$ norm $C$ (bounds sensitivity).
+  \item \textbf{Noise:} add Gaussian noise calibrated to $C$, dataset size, and target $(\varepsilon, \delta)$ so the uploaded coreset is DP.
+  \item \textbf{Guarantee:} the server only ever sees a privatized coreset; privacy depends on the DP mechanism, not trust in the server.
+  \item \textbf{Accounting:} track the per-round and total privacy loss $(\varepsilon, \delta)$ with a standard accountant (e.g., RDP or moments accountant) and log the cumulative budget for the run.
+\end{itemize}
+In short: we constrain and perturb each client's memory bank so the transmission itself is differentially private, and report the total privacy cost for the training session.
 
 \section{Conclusions and Future Steps}
 
