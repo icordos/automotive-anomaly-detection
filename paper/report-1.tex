@@ -46,6 +46,9 @@
 \usepackage[english]{babel}
 \usepackage[none]{hyphenat}
 
+\usepackage{pgf-umlsd}
+\usepackage{adjustbox}
+
 \title{Industrial Anomaly Detection}
 
 
@@ -323,9 +326,9 @@ Key configuration parameters for the federated setup:
     \item Communication protocol: gRPC via Flower framework
 \end{itemize}
 
-\section{Preliminary Results}
+\subsection{Preliminary Results}
 
-\subsection{Federated vs Centralized Performance}
+\subsubsection{Federated vs Centralized Performance}
 
 Table \ref{tab:federated_results} presents the federated learning results after 3 rounds of training, alongside the centralized baseline for comparison.
 
@@ -350,7 +353,7 @@ Table \ref{tab:federated_results} presents the federated learning results after 
     \label{tab:federated_results}
 \end{table}
 
-\subsection{Performance Degradation Analysis}
+\subsubsection{Performance Degradation Analysis}
 
 Figure \ref{fig:comparison} illustrates the dramatic performance gap between centralized and federated approaches. The federated implementation suffers from severe degradation across all categories:
 
@@ -380,7 +383,7 @@ The most severely affected categories are:
     \label{fig:detailed_comparison}
 \end{figure}
 
-\subsection{Root Cause Analysis}
+\subsubsection{Root Cause Analysis}
 
 The poor federated performance can be attributed to several fundamental issues in the current implementation:
 
@@ -398,6 +401,69 @@ The poor federated performance can be attributed to several fundamental issues i
     
     \item \textbf{Insufficient Training Rounds}: Only 3 federated rounds may be inadequate for convergence, though the lack of improvement across rounds suggests deeper architectural issues.
 \end{enumerate}
+
+\section{Enhanced Federated Learning Implementation}
+
+In order to progress this we implemented a number of enhancements:
+\begin{itemize}
+	\item Implemented a custom federated learning mechanism based on pickle RPC. The initial flower framework had strict synchronous client requirements, which was hard to implement in practice due to hardware availability. Our custom framework allowed asynchronous clients and separate upload and eval modes for clients. In the upload mode the client builds local memory banks and uploads them to the server. Once all clients have completed building their memory banks, the server will concatenate category banks and apply k-center coreset. In the eval mode the clients will download global banks into the trainer and compute the metrics.
+	\\
+\begin{adjustbox}{max width=\textwidth, max height=0.32\textheight, keepaspectratio, center}
+    \begin{sequencediagram}
+      % 1. Set font to 4.5pt (Smaller than \tiny)
+      \tikzstyle{every node}=[font=\fontsize{8.5}{9}\selectfont]
+
+      % 2. Redefine the header boxes (Client/Server) to be smaller to match the font
+      \tikzstyle{inststyle}+=[minimum height=0.6cm, minimum width=3.5cm, font=\fontsize{8}{9}\selectfont]
+
+      % 3. Threads (Only Client and Server)
+      \newthread{client}{Client}
+      \newthread{server}{Server}
+
+      % 4. Sequence Logic (Removed trainer)
+      \begin{callself}{client}{fit(category) x N}{memory\_banks, patch\_shapes}
+      \end{callself}
+
+      \begin{call}{client}{RPC upload (pickle + 8B len)}{server}{ok}
+      \end{call}
+
+      \begin{callself}{server}{aggregate (concat + k-center)}{global\_banks}
+      \end{callself}
+
+      \begin{call}{client}{RPC download (pickle + 8B len)}{server}{global\_banks, patch\_shapes}
+      \end{call}
+
+      \begin{callself}{client}{evaluate(category) x N}{metrics}
+      \end{callself}
+
+      \begin{callself}{client}{write client\_X\_metrics.json}{done}
+      \end{callself}
+
+    \end{sequencediagram}
+  \end{adjustbox}
+
+	\item As aggregation strategy we now concatenate and applies k-center greedy coreset selection with configurable maximum server samples and chunk sizes.
+	\item We implemented deterministic train splits 
+\end{itemize}
+
+The two figures below visualize the comparisons between the first federated implementation versus the current one versus the baseline centralized training loop.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{comparison002.png}
+    \caption{Comprehensive performance comparison showing: (top-left) image-level AUROC, (top-right) pixel-level AUROC, (bottom-left) performance degradation heatmap, (bottom-right) average metrics across all categories.}
+    \label{fig:comparison002}
+\end{figure}
+\FloatBarrier
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{detailed-comparison002.png}
+    \caption{Detailed per-category comparison of all four evaluation metrics (Image AUROC, Pixel AUROC, Image AP, Pixel AP) between centralized and federated approaches.}
+    \label{fig:detailed_comparison002}
+\end{figure}
+\FloatBarrier
+
 
 \section{Conclusions and Future Steps}
 
