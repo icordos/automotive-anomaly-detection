@@ -9,6 +9,11 @@ Downloads the AutoVI Zenodo archives referenced in docs/datasheet and optionally
 extracts a lightweight PNG sample for quick tests.
 
 Options:
+  --data-root DIR  Base directory for downloads/extracts/samples.
+                   Defaults to data/. Implies:
+                     downloads -> DIR/downloads
+                     extracts  -> DIR/raw
+                     samples   -> DIR/samples
   --samples N      Copy the first N image files per category into docs/samples/.
                    Implies extraction. Default: disabled.
   --no-extract     Skip unzip step (keep only the downloaded archives).
@@ -16,23 +21,31 @@ Options:
   -h, --help       Show this help and exit.
 
 Environment variables:
-  AUTO_VI_DOWNLOAD_DIR   Directory for downloaded zip files (default: data/downloads).
-  AUTO_VI_EXTRACT_DIR    Directory for extracted archives (default: data/raw).
-  AUTO_VI_SAMPLES_DIR    Directory for sample exports (default: docs/samples).
+  AUTO_VI_DATA_ROOT       Base directory for downloads/extracts/samples (default: data).
+  AUTO_VI_DOWNLOAD_DIR    Directory for downloaded zip files (overrides AUTO_VI_DATA_ROOT).
+  AUTO_VI_EXTRACT_DIR     Directory for extracted archives (overrides AUTO_VI_DATA_ROOT).
+  AUTO_VI_SAMPLES_DIR     Directory for sample exports (overrides AUTO_VI_DATA_ROOT).
 USAGE
 }
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DOWNLOAD_DIR="${AUTO_VI_DOWNLOAD_DIR:-$ROOT_DIR/data/downloads}"
-EXTRACT_DIR="${AUTO_VI_EXTRACT_DIR:-$ROOT_DIR/data/raw}"
-SAMPLES_DIR="${AUTO_VI_SAMPLES_DIR:-$ROOT_DIR/docs/samples}"
+DATA_ROOT="${AUTO_VI_DATA_ROOT:-$ROOT_DIR/data}"
+DOWNLOAD_DIR="${AUTO_VI_DOWNLOAD_DIR:-$DATA_ROOT/downloads}"
+EXTRACT_DIR="${AUTO_VI_EXTRACT_DIR:-$DATA_ROOT/raw}"
+SAMPLES_DIR="${AUTO_VI_SAMPLES_DIR:-$DATA_ROOT/samples}"
 
 SAMPLE_COUNT=0
 DO_EXTRACT=true
 FORCE_DOWNLOAD=false
+DATA_ROOT_ARG=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    --data-root)
+      [[ $# -ge 2 ]] || { echo "--data-root requires an argument" >&2; exit 1; }
+      DATA_ROOT_ARG="$2"
+      shift 2
+      ;;
     --samples)
       [[ $# -ge 2 ]] || { echo "--samples requires an argument" >&2; exit 1; }
       SAMPLE_COUNT="$2"
@@ -57,6 +70,13 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+if [[ -n "$DATA_ROOT_ARG" ]]; then
+  DATA_ROOT="$DATA_ROOT_ARG"
+  DOWNLOAD_DIR="$DATA_ROOT/downloads"
+  EXTRACT_DIR="$DATA_ROOT/raw"
+  SAMPLES_DIR="$DATA_ROOT/samples"
+fi
 
 if (( SAMPLE_COUNT > 0 )); then
   DO_EXTRACT=true
