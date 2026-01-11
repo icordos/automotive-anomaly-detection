@@ -58,11 +58,21 @@ class SequentialPatchCoreClient:
         categories: List[str],
         config: PatchCoreTrainingConfig,
         output_dir: Path,
+        dp_enabled: bool,
+        dp_epsilon: float,
+        dp_delta: float,
+        dp_clip_norm: float,
+        dp_seed: int | None,
     ) -> None:
         self.client_id = client_id
         self.categories = categories
         self.config = config
         self.output_dir = output_dir
+        self.dp_enabled = dp_enabled
+        self.dp_epsilon = dp_epsilon
+        self.dp_delta = dp_delta
+        self.dp_clip_norm = dp_clip_norm
+        self.dp_seed = dp_seed
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         self.trainer = PatchCoreTrainer(config)
@@ -87,10 +97,50 @@ class SequentialPatchCoreClient:
             import gc
             gc.collect()
 
+    def _apply_dp(self, banks_np: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+        if not self.dp_enabled:
+            return banks_np
+        if self.dp_epsilon <= 0:
+            raise ValueError("dp_epsilon must be > 0 when DP is enabled.")
+        if self.dp_delta <= 0 or self.dp_delta >= 1:
+            raise ValueError("dp_delta must be in (0, 1) when DP is enabled.")
+        if self.dp_clip_norm <= 0:
+            raise ValueError("dp_clip_norm must be > 0 when DP is enabled.")
+
+        sigma = float(np.sqrt(2 * np.log(1.25 / self.dp_delta)) / self.dp_epsilon)
+        noise_std = sigma * self.dp_clip_norm
+        rng = np.random.default_rng(self.dp_seed)
+
+        dp_banks: Dict[str, np.ndarray] = {}
+        for cat, mb in banks_np.items():
+            if mb.size == 0:
+                dp_banks[cat] = mb
+                continue
+            norms = np.linalg.norm(mb, axis=1, keepdims=True)
+            scale = np.minimum(1.0, self.dp_clip_norm / (norms + 1e-12))
+            clipped = mb * scale
+            noise = rng.normal(0.0, noise_std, size=clipped.shape).astype(clipped.dtype, copy=False)
+            dp_banks[cat] = clipped + noise
+
+        total_eps = self.dp_epsilon * max(1, len(banks_np))
+        total_delta = self.dp_delta * max(1, len(banks_np))
+        logging.info(
+            "[Client %d] DP enabled: eps=%.4f delta=%.2e clip=%.3f sigma=%.4f total_eps=%.4f total_delta=%.2e",
+            self.client_id,
+            self.dp_epsilon,
+            self.dp_delta,
+            self.dp_clip_norm,
+            sigma,
+            total_eps,
+            total_delta,
+        )
+        return dp_banks
+
     def upload(self, server_host: str, server_port: int) -> None:
         banks_np: Dict[str, np.ndarray] = {}
         for cat, mb in self.local_memory_banks.items():
             banks_np[cat] = mb.cpu().numpy().astype(np.float32, copy=False)
+        banks_np = self._apply_dp(banks_np)
 
         payload = {
             "action": "upload",
@@ -188,6 +238,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--log-level", type=str, default="INFO")
     p.add_argument("--train-partition-id", type=int, default=0)
     p.add_argument("--train-num-partitions", type=int, default=1)
+    p.add_argument("--dp", action="store_true", help="Enable client-side DP before upload")
+    p.add_argument("--dp-epsilon", type=float, default=1.0)
+    p.add_argument("--dp-delta", type=float, default=1e-5)
+    p.add_argument("--dp-clip-norm", type=float, default=1.0)
+    p.add_argument("--dp-seed", type=int, default=None)
     return p.parse_args()
 
 
@@ -220,6 +275,11 @@ def main() -> None:
         categories=args.categories,
         config=config,
         output_dir=client_out_dir,
+        dp_enabled=args.dp,
+        dp_epsilon=args.dp_epsilon,
+        dp_delta=args.dp_delta,
+        dp_clip_norm=args.dp_clip_norm,
+        dp_seed=args.dp_seed,
     )
 
     if args.mode == "upload":
