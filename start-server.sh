@@ -3,5 +3,5 @@
   --expected-client-ids 1 2 3 \
   --server-max-samples 5000 \
   --server-coreset-chunk-size 16384 \
-  --output-dir artifacts\server \
+  --output-dir artifacts/server \
   --log-level INFO
