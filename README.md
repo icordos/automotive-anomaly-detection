@@ -42,6 +42,7 @@ CATEGORIES=(engine_wiring pipe_clip)
 
 ## Running the final federated learning script on local machine ##
 Start the server first:
+
 ./src/federated/server_sequential.py /
   --host 0.0.0.0 --port 8081 /
   --expected-client-ids 1 2 3 /
@@ -64,6 +65,7 @@ Then start the clients, make sure each has different ids and output dirs:
   --device cuda --log-level INFO
 
 After all clients have finished, run the eval mode for all clients:
+
 ./src/federated/client_sequential.py /
   --mode eval --client-id 1 --categories engine_wiring pipe_clip /
   --server-host 10.8.0.5 --server-port 8081 /
