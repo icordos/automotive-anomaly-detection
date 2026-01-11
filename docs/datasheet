@@ -1,0 +1,161 @@
+# AutoVI Datasheet
+
+This document presents the datasheet associated with AutoVI ([https://doi.org/10.48550/arXiv.1803.09010](https://doi.org/10.48550/arXiv.1803.09010)).
+
+## Motivation
+
+### For what purpose was the dataset created?
+
+We created AutoVI to provide genuine industrial data for unsupervised visual anomaly detection to the research community. We hope that AutoVI will contribute to the development of new, state-of-the-art anomaly detection methods that can directly solve real industrial problems collected in the dataset. Unsupervised anomaly detection is of particular interest for industrial applications as it is particularly difficult to collect defects to train methods.
+
+The goal is twofold:
+* Providing the research community with genuine data, helping develop unsupervised methods for visual anomaly detection that are able to directly solve real-world problems;
+* Providing the industrial community with high-quality benchmarks that can be used to assess the performance of anomaly detection methods on real-world production lines.
+
+### Who created the dataset?
+
+The dataset was jointly created by the Roberval and Heudiasyc laboratories of the Université de technologie de Compiègne and Renault Group.
+
+### Who funded the creation of the dataset?
+
+The dataset was funded by the French Agence Nationale de la Recherche through the TEMIS project ([ANR-20-CE10-0004](https://anr.fr/Project-ANR-20-CE10-0004)) and Renault Group.
+
+## Composition
+
+### What do the instances that comprise the dataset represent?
+
+The dataset contains image data representing items subject to inspection on Renault Group's assembly lines. Each image is associated with a label:
+
+* non-defective images are in the folder good
+* defective images are stored in the corresponding defect folder:
+    * blue_hoop
+    * cardboard
+    * fastening
+    * multiple
+    * obstruction
+    * missing
+    * operator
+    * unclipped
+Each defective item is associated with one or multiple segmentation maps locating the defect.
+
+### How many instances are there in total?
+
+The dataset contains six item categories (engine wiring, pipe clip, pipe staple, tank screw, underbody pipes, underbody screw) totalling 3950 images. Category-wise, engine wiring contains 892 images, pipe clip contains 532 images, pipe staple contains 524 images, tank screw contains 731 images, underbody pipes contains 506 images, and underbody screw contains 765 images.
+
+### Does the dataset contain all possible instances or is it sample from a larger set?
+
+The dataset is a sample of all possible instances. We initially gathered a set of eight classes, two of which (kitting cart, tube fastening) were excluded from this version due to the difficulty in correctly labeling the images. In addition, some photographs were removed from the six remaining classes (duplicates, off-camera shots, excessive blur). The six classes of AutoVI are representative of the shooting conditions on their respective assembly lines. The original set of images is available at the following location: [https://doi.org/10.5281/zenodo.8099580](https://doi.org/10.5281/zenodo.8099580).
+
+### What data does each instance consist of?
+
+Each instance is a photograph of an item on Renault Group's assembly lines, which can be defective or non-defective. Three item categories (engine wiring, pipe clip, pipe staple) are represented on images that were cropped in order to better fit the inspection area. Other images are unprocessed. The raw uncropped images are available at the following location: (https://doi.org/10.5281/zenodo.10254684)[https://doi.org/10.5281/zenodo.10254684].
+
+### Is there a label or target associated with each instance?
+
+The dataset contains three root folders: ground_truth contains the segmentation masks, train contains the training data (i.e. only non-defective data), and test contains the test data. The test and ground_truth folders are subdivided into multiple subfolders indicating the defect typology. The test subfolders contain the image data. Each image has one or multiple corresponding segmentation masks in the corresponding location in the ground_truth folder. The defects_config.json file lists the defect types and associates them with the thresholds used to compute the sPRO metric ([https://link.springer.com/content/pdf/10.1007/s11263-022-01578-9.pdf](https://link.springer.com/content/pdf/10.1007/s11263-022-01578-9.pdf)).
+
+### Are there recommended data splits?
+
+The data is stored in the corresponding train / test folders.
+
+### Are there any errors, sources of noise, or redundancies in the dataset?
+
+We carefully crafted the dataset to ensure that there are no duplicates, and in particular that each image referred to different production items. We made sure that the labeling was correct for all images, as well as for the corresponding segmentation masks. The images are subject to multiple sources of hazard, namely lighting, vibration, and camera placement. We made sure that all variations present in test data are also present in the training data, so as to not raise false positives during evaluation.
+
+### Is the dataset self-contained, or does it link to or otherwise rely on external resources?
+
+The dataset is self-contained.
+
+### Does the dataset contain data that might be considered confidential?
+
+The data does not contain confidential data. Some images show people working on the assembly line. All identifying details have been blurred out.
+
+### Does the dataset contain data that, if viewed directly, might be offensive, insulting, threatening, or might otherwise cause anxiety?
+
+The dataset does not contain potentially offensive, insulting or threatening data.
+
+### Is it possible to identify individuals either directly or indirectly?
+
+Some images show people working on the assembly line. All identifying details have been blurred out.
+
+## Collection Process
+
+### How was the data associated with each instance acquired?
+
+The data was directly observable. The data is presented in chronological order, with the earlier shots in the training folder and the latter shots and defects in the test folder.
+
+### What mechanisms or procedures were used to collect the data?
+
+The data was collected using an industrial camera set in front of the inspection area on the assembly line. The camera automatically acquired pictures at regular intervals.
+
+### Who was involved in the data collection process and how were they compensated?
+
+
+VERIF RENAULT
+
+
+A research team, comprising an intern and two Renault Group supervisors, collected the data. They were paid as part of their full-time internship/employment with Renault Group.
+
+### Over what timeframe was the data collected?
+
+All photographs were collected over the course of several months. Each invidual class was shot over the course of a few days (about a week).
+
+### Were any ethical review processes conducted?
+
+No ethical review process was conducted.
+
+## Preprocessing/cleaning/labeling
+
+### Was any preprocessing/cleaning/labeling of the data done?
+
+The data was preprocessed. Pictures that did not fit (excessively blurry, off-screen shots) were manually removed by Renault Group experts. Remaining pictures were further analyzed: duplicates were removed, and images were classified into corresponding defect categories. These categories were chosen by grouping similar defects together and labeling them. Pictures in three categories (engine wiring, pipe clip, pipe staple) were cropped using a template matching algorithm to remove the surrounding environment. The faces of the operators working in the shooting area were blurred. Two of the classes were removed due to the difficulty in labeling the data.
+
+### Was the "raw" data saved in addition to the preprocessed data?
+
+We provide versions 0.1.0 ([https://doi.org/10.5281/zenodo.8099580](https://doi.org/10.5281/zenodo.8099580)) and 0.1.1 ([https://doi.org/10.5281/zenodo.10254684](https://doi.org/10.5281/zenodo.10254684)) of AutoVI. v0.1.0 contains the initial eight classes without image processing or duplicate removal. v0.1.1 contains all preprocessing steps, but only misses the segmentation labels and the cropping operation.
+
+### Is the software that was used to preprocess/clean/label the data available?
+
+The segmentation masks were created with CVAT ([https://www.cvat.ai/](https://www.cvat.ai/)).
+
+## Uses
+
+### What tasks could the dataset be used for?
+
+This dataset is meant to be used as a benchmark for industrial defect detection, and can be used in the broader context of out-of-distribution detection.
+
+## Distribution
+
+### How will the dataset be distributed?
+
+This dataset is made available on Zenodo following a CC-BY-NC-SA-4.0 license.
+
+### Will the dataset be distributed under a copyright or other intellectual property license, and/or under applicable terms of use?
+
+This dataset is made available through the CC-BY-NC-SA-4.0 license.
+
+## Maintenance
+
+### Who will be supporting/hosting/maintaining the dataset?
+
+The dataset is hosted by Zenodo and will be supported and maintained by the Université de technologie de Compiègne.
+
+### How can the manager of the dataset be contacted?
+
+The manager of the dataset is Alexandre Durupt (alexandre.durupt@utc.fr).
+
+### Is there an erratum?
+
+There is no erratum.
+
+### Will the dataset be updated?
+
+We plan to eventually update the dataset by adding new instances and classes. Updates will be communicated through the official website ([https://autovi.utc.fr](https://autovi.utc.fr)) and the following DOI that refers to the latest version of the dataset: [https://zenodo.org/doi/10.5281/zenodo.8099579](https://zenodo.org/doi/10.5281/zenodo.8099579).
+
+### Will older versions of the dataset continue to be supported/hosted/maintained?
+
+All versions of the dataset will continue to be hosted for the foreseeable future.
+
+### If others want to extend/augment/build on/contribute to the dataset, is there a mechanism for them to do so?
+
+There is currently no mechanism for others to contribute to AutoVI. Any contributions can be directly proposed to the manager of the dataset.

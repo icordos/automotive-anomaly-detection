@@ -1,0 +1,84 @@
+============================================================
+Starting Federated PatchCore Server
+Number of clients: 3
+Number of rounds: 3
+Server address: 0.0.0.0:8080
+============================================================
+
+[Server] Aggregating memory banks from 3 clients...
+[Server] Processing client 1 with categories: ['engine_wiring', 'pipe_clip']
+[Server] Processing client 3 with categories: ['underbody_pipes', 'underbody_screw']
+[Server] Processing client 2 with categories: ['pipe_staple', 'tank_screw']
+[Server] Aggregating 1 memory banks for category: engine_wiring
+[Server] Applying random sampling: 116736 -> 50000
+[Server] engine_wiring: Global memory bank shape = (50000, 1536)
+[Server] Aggregating 1 memory banks for category: pipe_clip
+[Server] Applying random sampling: 79872 -> 50000
+[Server] pipe_clip: Global memory bank shape = (50000, 1536)
+[Server] Aggregating 1 memory banks for category: underbody_pipes
+[Server] Applying random sampling: 65945 -> 50000
+[Server] underbody_pipes: Global memory bank shape = (50000, 1536)
+[Server] Aggregating 1 memory banks for category: underbody_screw
+[Server] Applying random sampling: 152780 -> 50000
+[Server] underbody_screw: Global memory bank shape = (50000, 1536)
+[Server] Aggregating 1 memory banks for category: pipe_staple
+[Server] Applying random sampling: 78233 -> 50000
+[Server] pipe_staple: Global memory bank shape = (50000, 1536)
+[Server] Aggregating 1 memory banks for category: tank_screw
+[Server] Applying random sampling: 130252 -> 50000
+[Server] tank_screw: Global memory bank shape = (50000, 1536)
+
+[Server] Evaluation metrics: {'tank_screw_image_roc_auc': 0.1503254992827982, 'engine_wiring_image_ap': 0.17753669025018062, 'tank_screw_pixel_roc_auc': 0.30191577682875814, 'engine_wiring_pixel_roc_auc': 0.23256149914755644, 'pipe_staple_image_ap': 0.14830529131190237, 'underbody_screw_pixel_roc_auc': 0.294525534802697, 'pipe_clip_pixel_ap': 0.0028764703589291398, 'underbody_screw_image_roc_auc': 0.12180629827688651, 'underbody_screw_image_ap': 0.014206084587194103, 'underbody_screw_pixel_ap': 0.00025132861516988594, 'engine_wiring_pixel_ap': 0.0019898041126413806, 'pipe_staple_pixel_roc_auc': 0.18371060720971208, 'engine_wiring_image_roc_auc': 0.16601649050161638, 'loss': -0.49954986873578766, 'pipe_clip_image_roc_auc': 0.18562657999277718, 'pipe_staple_pixel_ap': 0.004536382641920146, 'tank_screw_image_ap': 0.06740201200611055, 'underbody_pipes_pixel_ap': 0.011174880786128896, 'underbody_pipes_pixel_roc_auc': 0.2275933346860263, 'pipe_clip_pixel_roc_auc': 0.21866478640569809, 'pipe_clip_image_ap': 0.15214996143514814, 'underbody_pipes_image_ap': 0.18918339945174314, 'avg_auroc': 0.49954986873578766, 'pipe_staple_image_roc_auc': 0.19017094017094016, 'underbody_pipes_image_roc_auc': 0.18515392924655685, 'tank_screw_pixel_ap': 0.0034242026118233163}
+
+[Server] Aggregating memory banks from 3 clients...
+[Server] Processing client 2 with categories: ['pipe_staple', 'tank_screw']
+[Server] Processing client 1 with categories: ['engine_wiring', 'pipe_clip']
+[Server] Processing client 3 with categories: ['underbody_pipes', 'underbody_screw']
+[Server] Aggregating 1 memory banks for category: pipe_staple
+[Server] Applying random sampling: 78233 -> 50000
+[Server] pipe_staple: Global memory bank shape = (50000, 1536)
+[Server] Aggregating 1 memory banks for category: tank_screw
+[Server] Applying random sampling: 130252 -> 50000
+[Server] tank_screw: Global memory bank shape = (50000, 1536)
+[Server] Aggregating 1 memory banks for category: engine_wiring
+[Server] Applying random sampling: 116736 -> 50000
+[Server] engine_wiring: Global memory bank shape = (50000, 1536)
+[Server] Aggregating 1 memory banks for category: pipe_clip
+[Server] Applying random sampling: 79872 -> 50000
+[Server] pipe_clip: Global memory bank shape = (50000, 1536)
+[Server] Aggregating 1 memory banks for category: underbody_pipes
+[Server] Applying random sampling: 65945 -> 50000
+[Server] underbody_pipes: Global memory bank shape = (50000, 1536)
+[Server] Aggregating 1 memory banks for category: underbody_screw
+[Server] Applying random sampling: 152780 -> 50000
+[Server] underbody_screw: Global memory bank shape = (50000, 1536)
+
+[Server] Evaluation metrics: {'tank_screw_image_roc_auc': 0.16998786273860753, 'engine_wiring_image_ap': 0.19460861961786052, 'tank_screw_pixel_roc_auc': 0.19592074520698807, 'engine_wiring_pixel_roc_auc': 0.23576330276042726, 'pipe_staple_image_ap': 0.14627641855994192, 'pipe_clip_pixel_ap': 0.0026662609920688834, 'underbody_screw_pixel_roc_auc': 0.3323701828388129, 'underbody_screw_image_roc_auc': 0.25495147553971087, 'underbody_screw_pixel_ap': 0.020223333914576546, 'underbody_screw_image_ap': 0.029610209059573844, 'engine_wiring_pixel_ap': 0.002055699090164392, 'pipe_staple_pixel_roc_auc': 0.1721373371598135, 'engine_wiring_image_roc_auc': 0.17313937016454176, 'loss': -0.6093752609363318, 'pipe_clip_image_roc_auc': 0.18286986878536174, 'pipe_staple_pixel_ap': 0.004192977825311735, 'tank_screw_image_ap': 0.08335297871249493, 'underbody_pipes_pixel_ap': 0.01633171570102165, 'underbody_pipes_pixel_roc_auc': 0.2276386475808644, 'pipe_clip_pixel_roc_auc': 0.2095849137525675, 'pipe_clip_image_ap': 0.14821183820254943, 'underbody_pipes_image_ap': 0.23010254491771964, 'avg_auroc': 0.6093752609363318, 'pipe_staple_image_roc_auc': 0.19294417166757594, 'underbody_pipes_image_roc_auc': 0.24485777297686562, 'tank_screw_pixel_ap': 0.00032966700866418413}
+
+[Server] Aggregating memory banks from 3 clients...
+[Server] Processing client 1 with categories: ['engine_wiring', 'pipe_clip']
+[Server] Processing client 3 with categories: ['underbody_pipes', 'underbody_screw']
+[Server] Processing client 2 with categories: ['pipe_staple', 'tank_screw']
+[Server] Aggregating 1 memory banks for category: engine_wiring
+[Server] Applying random sampling: 116736 -> 50000
+[Server] engine_wiring: Global memory bank shape = (50000, 1536)
+[Server] Aggregating 1 memory banks for category: pipe_clip
+[Server] Applying random sampling: 79872 -> 50000
+[Server] pipe_clip: Global memory bank shape = (50000, 1536)
+[Server] Aggregating 1 memory banks for category: underbody_pipes
+[Server] Applying random sampling: 65945 -> 50000
+[Server] underbody_pipes: Global memory bank shape = (50000, 1536)
+[Server] Aggregating 1 memory banks for category: underbody_screw
+[Server] Applying random sampling: 152780 -> 50000
+[Server] underbody_screw: Global memory bank shape = (50000, 1536)
+[Server] Aggregating 1 memory banks for category: pipe_staple
+[Server] Applying random sampling: 78233 -> 50000
+[Server] pipe_staple: Global memory bank shape = (50000, 1536)
+[Server] Aggregating 1 memory banks for category: tank_screw
+[Server] Applying random sampling: 130252 -> 50000
+[Server] tank_screw: Global memory bank shape = (50000, 1536)
+
+[Server] Evaluation metrics: {'tank_screw_image_roc_auc': 0.15284122255323845, 'engine_wiring_image_ap': 0.18023871338364597, 'engine_wiring_pixel_roc_auc': 0.23239923887259578, 'tank_screw_pixel_roc_auc': 0.30186127913329847, 'pipe_staple_image_ap': 0.14993815446895112, 'underbody_screw_pixel_roc_auc': 0.29431247398342614, 'pipe_clip_pixel_ap': 0.002907213766492677, 'underbody_screw_image_roc_auc': 0.10427807486631015, 'underbody_screw_image_ap': 0.01306187863886269, 'underbody_screw_pixel_ap': 0.0002421447445178943, 'engine_wiring_pixel_ap': 0.0019875843706694696, 'pipe_staple_pixel_roc_auc': 0.18388614676561985, 'engine_wiring_image_roc_auc': 0.16796701899676728, 'loss': -0.4910460386536699, 'pipe_clip_image_roc_auc': 0.18386902612254724, 'pipe_staple_pixel_ap': 0.004550741783892381, 'tank_screw_image_ap': 0.06911711532189614, 'underbody_pipes_pixel_ap': 0.011414310062747427, 'underbody_pipes_pixel_roc_auc': 0.22770985115545964, 'pipe_clip_pixel_roc_auc': 0.21940026990231692, 'pipe_clip_image_ap': 0.15385027449487299, 'underbody_pipes_image_ap': 0.18399870939243598, 'avg_auroc': 0.4910460386536699, 'pipe_staple_image_roc_auc': 0.193777656543614, 'underbody_pipes_image_roc_auc': 0.17935907822486274, 'tank_screw_pixel_ap': 0.0032089544449971055}
+
+[Server] Training complete!
+[Server] Results saved to: artifacts/federated/server

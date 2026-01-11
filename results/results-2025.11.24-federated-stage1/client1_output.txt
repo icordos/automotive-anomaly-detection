@@ -1,0 +1,35 @@
+[Client 1] Connecting to server at 172.24.12.3:8080...
+[Client 1] Categories: ['engine_wiring', 'pipe_clip']
+[Client 1] Starting local training...
+[Client 1] Training on category: engine_wiring
+[Client 1] engine_wiring: 116736 features extracted
+[Client 1] Training on category: pipe_clip
+[Client 1] pipe_clip: 79872 features extracted
+[Client 1] Starting evaluation...
+[Client 1] Evaluating on category: engine_wiring
+[Client 1] Memory cleaned after engine_wiring
+[Client 1] Evaluating on category: pipe_clip
+[Client 1] Memory cleaned after pipe_clip
+[Client 1] Final memory cleanup completed
+[Client 1] Starting local training...
+[Client 1] Training on category: engine_wiring
+[Client 1] engine_wiring: 116736 features extracted
+[Client 1] Training on category: pipe_clip
+[Client 1] pipe_clip: 79872 features extracted
+[Client 1] Starting evaluation...
+[Client 1] Evaluating on category: engine_wiring
+[Client 1] Memory cleaned after engine_wiring
+[Client 1] Evaluating on category: pipe_clip
+[Client 1] Memory cleaned after pipe_clip
+[Client 1] Final memory cleanup completed
+[Client 1] Starting local training...
+[Client 1] Training on category: engine_wiring
+[Client 1] engine_wiring: 116736 features extracted
+[Client 1] Training on category: pipe_clip
+[Client 1] pipe_clip: 79872 features extracted
+[Client 1] Starting evaluation...
+[Client 1] Evaluating on category: engine_wiring
+[Client 1] Memory cleaned after engine_wiring
+[Client 1] Evaluating on category: pipe_clip
+[Client 1] Memory cleaned after pipe_clip
+[Client 1] Final memory cleanup completed

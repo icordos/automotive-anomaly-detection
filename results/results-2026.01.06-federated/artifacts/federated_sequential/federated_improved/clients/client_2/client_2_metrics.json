@@ -1,0 +1,12 @@
+{
+  "engine_wiring_image_roc_auc": 0.6174457883840034,
+  "engine_wiring_pixel_roc_auc": 0.8682269467940354,
+  "engine_wiring_image_ap": 0.6563831250108177,
+  "engine_wiring_pixel_ap": 0.015715672614977395,
+  "tank_screw_image_roc_auc": 0.4442899702085402,
+  "tank_screw_pixel_roc_auc": 0.8215472146348117,
+  "tank_screw_image_ap": 0.19376968160894803,
+  "tank_screw_pixel_ap": 0.0037727247949685423,
+  "avg_auroc": 0.5308678792962718,
+  "total_test_images": 1020.0
+}

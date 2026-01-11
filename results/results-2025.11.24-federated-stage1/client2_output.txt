@@ -1,0 +1,35 @@
+[Client 2] Connecting to server at 172.24.12.3:8080...
+[Client 2] Categories: ['pipe_staple', 'tank_screw']
+[Client 2] Starting local training...
+[Client 2] Training on category: pipe_staple
+[Client 2] pipe_staple: 78233 features extracted
+[Client 2] Training on category: tank_screw
+[Client 2] tank_screw: 130252 features extracted
+[Client 2] Starting evaluation...
+[Client 2] Evaluating on category: pipe_staple
+[Client 2] Memory cleaned after pipe_staple
+[Client 2] Evaluating on category: tank_screw
+[Client 2] Memory cleaned after tank_screw
+[Client 2] Final memory cleanup completed
+[Client 2] Starting local training...
+[Client 2] Training on category: pipe_staple
+[Client 2] pipe_staple: 78233 features extracted
+[Client 2] Training on category: tank_screw
+[Client 2] tank_screw: 130252 features extracted
+[Client 2] Starting evaluation...
+[Client 2] Evaluating on category: pipe_staple
+[Client 2] Memory cleaned after pipe_staple
+[Client 2] Evaluating on category: tank_screw
+[Client 2] Memory cleaned after tank_screw
+[Client 2] Final memory cleanup completed
+[Client 2] Starting local training...
+[Client 2] Training on category: pipe_staple
+[Client 2] pipe_staple: 78233 features extracted
+[Client 2] Training on category: tank_screw
+[Client 2] tank_screw: 130252 features extracted
+[Client 2] Starting evaluation...
+[Client 2] Evaluating on category: pipe_staple
+[Client 2] Memory cleaned after pipe_staple
+[Client 2] Evaluating on category: tank_screw
+[Client 2] Memory cleaned after tank_screw
+[Client 2] Final memory cleanup completed

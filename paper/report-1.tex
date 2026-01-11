@@ -1,0 +1,459 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+%     \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading neurips_2024
+
+
+% ready for submission
+%\usepackage{neurips_2024}
+
+
+% to compile a preprint version, e.g., for submission to arXiv, add add the
+% [preprint] option:
+     \usepackage[preprint]{neurips_2024}
+
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+%     \usepackage[final]{neurips_2024}
+
+
+% to avoid loading the natbib package, add option nonatbib:
+%    \usepackage[nonatbib]{neurips_2024}
+
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{xcolor}         % colors
+\usepackage{titling}
+\usepackage{graphicx} % Required for images
+\usepackage{graphicx} % Required for images
+\usepackage{placeins}
+\usepackage{subfig}
+\usepackage{natbib} % For better citation handling
+\usepackage{float}
+
+% IBM Plex fonts
+\usepackage{plex-serif}   % For main text
+\usepackage{plex-sans}    % For sans-serif
+\usepackage{plex-mono}    % For monospaced
+\usepackage[english]{babel}
+\usepackage[none]{hyphenat}
+
+\title{Industrial Anomaly Detection}
+
+
+% The \author macro works with any number of authors. There are two commands
+% used to separate the names and addresses of multiple authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to break the
+% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
+% authors names on the first line, and the last on the second line, try using
+% \AND instead of \And before the third author name.
+
+\author{
+    Victor Constantinescu \quad Cristian Cordoș \quad Matei Neaga \\
+    National University of Science and Technology POLITEHNICA Bucharest, Romania \\
+    \texttt{vconstantinescu2710@stud.acs.upb.ro} \\
+    \texttt{ioan.cordos@stud.acs.upb.ro} \\
+    \texttt{matei.neaga@stud.mec.upb.ro}
+}
+
+
+\begin{document}
+
+
+\maketitle
+
+
+\begin{abstract}
+In this work we are exploring ways to detect defective parts in automotive production lines. Using the AutoVI dataset, we implement a PatchCore based detection loop and we attempt to apply trustworthy AI techniques to improve it.
+
+\end{abstract}
+
+
+\section{Introduction}
+
+In modern industrial production environments, visual inspection systems play a critical role in ensuring product quality, process reliability, and cost efficiency. In the automotive industry in particular, inspection tasks are characterised by high variability in product appearance, constrained acquisition conditions (e.g., lighting changes, moving parts, limited access), and the need to detect both known and novel anomalies. To address these challenges, robust data-driven methods—including unsupervised and semi-supervised anomaly detection—are increasingly being adopted.  
+
+The AutoVI dataset, developed jointly by Renault Group, OPMobility, Continental, and Université de technologie de Compiègne, provides a genuine industrial-scale benchmark for anomaly detection in automotive production lines. The images were acquired under realistic production-line conditions—with varying illumination, constant component motion, and genuine product variability—making the dataset especially relevant for evaluating algorithms intended for deployment in factory settings.
+
+While many existing datasets focus on standardised or artificially generated defect types, AutoVI emphasises the detection of previously unseen defects (i.e., defects not present in the training set), thereby aligning with real-world inspection scenarios where novelty detection is critical. This dataset currently comprises 11 classes and 7,184 images, split into training and testing partitions.  \citep{Carvalho2024AutoVI}
+
+In this paper, we exploit the AutoVI dataset to investigate the how trustworthy AI principles can be applied through techniques such as Federated Learning (FL), Differential Privacy(DP), or Explainable AI (XAI). For the first iteration of the project we build a basic training / test loop using the PatchCore technique and simulate a few federated clients with non-IID data splits.
+
+\section{Related Work}
+
+Most anomaly detection models are built upon the ability to learn representations inherent to the nominal (non-defective) data distribution. This task is often framed as a cold-start or one-class classification (OCC) problem, requiring distinction between samples drawn from the training data distribution and outliers outside its support.
+
+Classical approaches to learning the nominal distribution often leverage autoencoding methods \cite{Sakurada2014} or Generative Adversarial Networks (GANs). Extensions to autoencoding models include the use of Gaussian mixture models, structural objectives , or enforcing robustness of hidden features to reconstruction reintroduction. Once nominal representations are learned, anomaly detection can be performed by calculating reconstruction errors \cite{Sakurada2014}, measuring distances to k nearest neighbours (kNN), or by fine-tuning one-class classification models, such as Support Vector Data Description (SVDD) \cite{Tax2004} or OC-SVMs, on top of these features.
+
+\subsection{Industrial Anomaly Detection via Deep Features}
+
+While the general anomaly detection literature is extensive, industrial image data presents unique challenges. Recent state-of-the-art methods in industrial anomaly detection have emerged by utilizing models pretrained on large external natural image datasets like ImageNet without requiring adaptation to the target data. The success of these non-adaptive methods relies on feature matching between the test sample and nominal samples, exploiting the multi-scale nature of deep feature representations for both fine-grained segmentation and structural anomaly detection.
+
+The method proposed in this paper, PatchCore, extends this line of work and is most closely related to SPADE \cite{Cohen2020} and PaDiM \cite{Defard2021}.
+
+\begin{itemize}
+    \item \textbf{SPADE} \cite{Cohen2020}: This approach utilizes memory banks composed of nominal features extracted from various feature hierarchies of a pretrained backbone network. It relies on kNN-based methods for anomaly segmentation and image-level detection.
+    \item \textbf{PaDiM} \cite{Defard2021}: This framework employs a locally constrained bag-of-features approach to estimate patch-level feature distribution moments (mean and covariance). Anomaly measurement is then calculated using Mahalanobis distance measures specific to each patch.
+\end{itemize}
+
+The core principle of PatchCore involves improving upon these predecessors by employing a memory bank of \textbf{neighbourhood-aware patch-level features} to retain more nominal context and incorporate a better inductive bias. Furthermore, PatchCore addresses the computational challenges of large memory banks, a known issue for methods like SPADE, by introducing \textbf{greedy coreset subsampling} to reduce redundancy, storage memory, and significantly decrease inference time. This approach is specifically designed to maximize nominal information at test time while retaining high inference speeds \citep{Roth2022TotalRecall}.
+
+\section{Preprocessing Pipeline}
+The data is hosted on Zenodo, which is  free, open-access research data repository created by CERN and supported by the European Commission. Its purpose is to let researchers upload, preserve, and share all kinds of research outputs — not just papers, but datasets, code, software releases, posters, presentations, images, videos, notebooks, even entire project snapshots.
+\\
+The dataset is described in a croissant file provided by Renault. For each of the six categories the croissant metadata pointo to a zip file hosted on Zenodo. We have used the exact structure provided by Renault and the only preprocessing that we did was to unzip the archives. 
+\\
+The dataset is structured per category as follows:
+\begin{itemize}
+	\item \textbf{train}: the train folder contains only "good" images for each category
+	\item \textbf{test}: the test folder contains one subdirectory per defect type (e.g. missing, contamination, etc) plus a good folder
+	\item \textbf{ground\_truth}: for every anomalous test image, pixel annotations are stored at ground\_truth/<defect-name>/<image-stem>/0000.png 
+	\item \textbf{defects\_config.json}: metadata about defect types.
+	\item \textbf{defect\_example.png}: visualization of defects
+\end{itemize}
+
+\section{Dataset Description}
+
+There are six categories of car parts over which we are operating - engine wiring, pipe clips, pipe staples, tank screws, underbody pipes and underbody screws.
+\\
+For model training only good examples of parts are provided. The table below shows how many training images are provided per category.
+\\
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{l r}
+        \hline
+        \textbf{Category} & \textbf{\# Train Images} \\
+        \hline
+        engine\_wiring     & 285 \\
+        pipe\_clip         & 195 \\
+        pipe\_staple       & 191 \\
+        tank\_screw        & 318 \\
+        underbody\_pipes   & 161 \\
+        underbody\_screw   & 373 \\
+        \hline
+    \end{tabular}
+    \caption{Number of training images per category.}
+    \label{tab:train_images_categories}
+\end{table}
+
+
+The testing dataset provides images of good and defective parts split by category. The figure below shows an example of a good engine wiring part vs an obstructed engine wiring part.
+\\
+\begin{figure}[H]
+\centering
+
+\begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{good-engine-wiring-0000.png}
+    \caption*{Good sample}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{defect-engine-wiring-obstruction-0000.png}
+    \caption*{Defect sample}
+\end{minipage}
+
+\caption{Comparison between good and defect engine wiring samples.}
+\label{fig:engine-wiring-comparison}
+\end{figure}
+\FloatBarrier
+
+The count of test files is shown below:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{l r}
+        \hline
+        \textbf{Category} & \textbf{\# Test Files} \\
+        \hline
+        engine\_wiring    & 607 \\
+        pipe\_clip        & 337 \\
+        pipe\_staple      & 305 \\
+        tank\_screw       & 413 \\
+        underbody\_pipes  & 345 \\
+        underbody\_screw  & 392 \\
+        \hline
+    \end{tabular}
+    \caption{Number of test files per category in the AutoVI dataset.}
+    \label{tab:test_files_per_category}
+\end{table}
+
+We also show below a split of the whole test dataset based on defect type:
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{l r}
+        \hline
+        \textbf{Defect Type} & \textbf{\# Test Images} \\
+        \hline
+        good         & 1521 \\
+        blue\_hoop    & 5 \\
+        cardboard     & 5 \\
+        fastening     & 277 \\
+        multiple      & 34 \\
+        obstruction   & 182 \\
+        operator      & 4 \\
+        unclipped     & 141 \\
+        missing       & 230 \\
+        \hline
+    \end{tabular}
+    \caption{Counts of good and defect types across the Test split.}
+    \label{tab:defects_test_split}
+\end{table}
+
+
+
+\section{Baseline Model Architecture}
+
+For our baseline anomaly detection model, we employ PatchCore \citep{Roth2022TotalRecall}, a memory-based approach that achieves state-of-the-art performance on industrial anomaly detection tasks without requiring defect samples during training.
+
+\subsection{PatchCore Overview}
+
+PatchCore operates by extracting features from normal (non-defective) images using a pre-trained convolutional neural network backbone. Rather than training a classifier, PatchCore builds a memory bank of representative patch-level features from the training set. During inference, anomalies are detected by measuring the deviation of test image features from this learned distribution of normal patterns.
+
+The key components of our PatchCore implementation are:
+
+\begin{itemize}
+    \item \textbf{Feature Extraction}: We use a pre-trained Wide ResNet-50 backbone to extract multi-scale features at intermediate layers (specifically layers 2 and 3). These features capture both low-level textures and high-level semantic information.
+    
+    \item \textbf{Memory Bank Construction}: From the extracted training features, we construct a compact memory bank using coreset subsampling. This reduces the computational burden while maintaining representative coverage of the normal feature space.
+    
+    \item \textbf{Anomaly Scoring}: At test time, for each patch in the input image, we compute its distance to the nearest neighbor in the memory bank. High distances indicate anomalous regions.
+\end{itemize}
+
+\subsection{Implementation Details}
+
+Our implementation uses the following configuration:
+\begin{itemize}
+    \item Input image size: 224×224 pixels
+    \item Batch size: 32
+    \item Coreset sampling ratio: 10\% (random sampling for baseline)
+    \item Feature dimension: 1536 (concatenated from two ResNet layers)
+    \item Device: CUDA-enabled GPU
+\end{itemize}
+
+For each of the six AutoVI categories, we train a separate PatchCore model, as each category exhibits distinct visual characteristics and defect patterns.
+
+\subsection{Centralized Learning Results}
+
+We first establish baseline performance by training PatchCore models in a centralized manner, where all training data for each category is available to a single model. Table \ref{tab:centralized_results} presents the performance metrics across all six categories.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{l c c c c}
+        \hline
+        \textbf{Category} & \textbf{Image AUROC} & \textbf{Pixel AUROC} & \textbf{Image AP} & \textbf{Pixel AP} \\
+        \hline
+        engine\_wiring     & 0.548 & 0.857 & 0.596 & 0.014 \\
+        pipe\_clip         & 0.511 & 0.808 & 0.425 & 0.016 \\
+        pipe\_staple       & 0.587 & 0.793 & 0.465 & 0.033 \\
+        tank\_screw        & 0.473 & 0.817 & 0.216 & 0.004 \\
+        underbody\_pipes   & 0.829 & 0.877 & 0.743 & 0.244 \\
+        underbody\_screw   & 0.605 & 0.988 & 0.058 & 0.014 \\
+        \hline
+        \textbf{Average}   & 0.592 & 0.857 & 0.417 & 0.054 \\
+        \hline
+    \end{tabular}
+    \caption{Centralized PatchCore performance on AutoVI dataset. AUROC = Area Under ROC Curve, AP = Average Precision.}
+    \label{tab:centralized_results}
+\end{table}
+
+The centralized models achieve strong pixel-level AUROC scores (average 0.857), indicating good localization of defects. Image-level AUROC is more modest (average 0.592), reflecting the challenge of binary classification on this industrial dataset. Notably, underbody\_screw achieves exceptional pixel-level AUROC of 0.988, while underbody\_pipes shows the best image-level performance at 0.829.
+
+\section{Federated Setup}
+
+To investigate privacy-preserving anomaly detection, we implement a federated learning framework using the Flower library. Our setup simulates a realistic scenario where different production lines or facilities possess data for different product categories.
+
+\subsection{Architecture}
+
+Our federated implementation consists of:
+
+\begin{itemize}
+    \item \textbf{Server}: Coordinates the federated training process, aggregates memory banks from clients, and distributes the global model. The server uses a custom FedAvg strategy adapted for memory bank aggregation rather than traditional model parameter averaging.
+    
+    \item \textbf{Clients}: Each client represents a production facility with access to training data for a subset of categories. Clients extract features locally, build category-specific memory banks, and share these with the server.
+\end{itemize}
+
+\subsection{Data Partitioning}
+
+We simulate a non-IID (non-independent and identically distributed) data split across three clients:
+
+\begin{itemize}
+    \item \textbf{Client 1}: engine\_wiring, pipe\_clip
+    \item \textbf{Client 2}: pipe\_staple, tank\_screw
+    \item \textbf{Client 3}: underbody\_pipes, underbody\_screw
+\end{itemize}
+
+This partitioning reflects a realistic industrial scenario where different production facilities specialize in different components.
+
+\subsection{Aggregation Method}
+
+Unlike traditional federated learning that averages model weights, our approach aggregates memory banks:
+
+\begin{enumerate}
+    \item Each client extracts features from local training data and constructs category-specific memory banks
+    \item Clients send their memory banks to the server
+    \item The server concatenates all memory banks for each category
+    \item To limit computational cost, the server applies random sampling to cap each category's memory bank at 50,000 features
+    \item The aggregated global memory banks are distributed back to clients for evaluation
+\end{enumerate}
+
+This process is repeated for 3 federated rounds.
+
+\subsection{Implementation Details}
+
+Key configuration parameters for the federated setup:
+
+\begin{itemize}
+    \item Number of clients: 3
+    \item Number of federated rounds: 3
+    \item Memory bank size limit: 50,000 features per category
+    \item Aggregation method: Concatenation + random sampling
+    \item Communication protocol: gRPC via Flower framework
+\end{itemize}
+
+\section{Preliminary Results}
+
+\subsection{Federated vs Centralized Performance}
+
+Table \ref{tab:federated_results} presents the federated learning results after 3 rounds of training, alongside the centralized baseline for comparison.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{l c c c c}
+        \hline
+        \textbf{Category} & \multicolumn{2}{c}{\textbf{Image AUROC}} & \multicolumn{2}{c}{\textbf{Pixel AUROC}} \\
+        & Centralized & Federated & Centralized & Federated \\
+        \hline
+        engine\_wiring     & 0.548 & 0.173 & 0.857 & 0.236 \\
+        pipe\_clip         & 0.511 & 0.183 & 0.808 & 0.210 \\
+        pipe\_staple       & 0.587 & 0.193 & 0.793 & 0.172 \\
+        tank\_screw        & 0.473 & 0.170 & 0.817 & 0.196 \\
+        underbody\_pipes   & 0.829 & 0.245 & 0.877 & 0.228 \\
+        underbody\_screw   & 0.605 & 0.255 & 0.988 & 0.332 \\
+        \hline
+        \textbf{Average}   & 0.592 & 0.203 & 0.857 & 0.229 \\
+        \hline
+    \end{tabular}
+    \caption{Comparison of centralized vs federated PatchCore performance (best federated round shown).}
+    \label{tab:federated_results}
+\end{table}
+
+\subsection{Performance Degradation Analysis}
+
+Figure \ref{fig:comparison} illustrates the dramatic performance gap between centralized and federated approaches. The federated implementation suffers from severe degradation across all categories:
+
+\begin{itemize}
+    \item \textbf{Image-level AUROC}: 58-70\% degradation (average -65.7\%)
+    \item \textbf{Pixel-level AUROC}: 66-78\% degradation (average -73.3\%)
+\end{itemize}
+
+The most severely affected categories are:
+\begin{itemize}
+    \item pipe\_staple: -78.3\% pixel AUROC degradation
+    \item tank\_screw: -76.0\% pixel AUROC degradation  
+    \item pipe\_clip: -74.0\% pixel AUROC degradation
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{centralized_vs_federated_comparison.png}
+    \caption{Comprehensive performance comparison showing: (top-left) image-level AUROC, (top-right) pixel-level AUROC, (bottom-left) performance degradation heatmap, (bottom-right) average metrics across all categories.}
+    \label{fig:comparison}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{detailed_category_comparison.png}
+    \caption{Detailed per-category comparison of all four evaluation metrics (Image AUROC, Pixel AUROC, Image AP, Pixel AP) between centralized and federated approaches.}
+    \label{fig:detailed_comparison}
+\end{figure}
+
+\subsection{Root Cause Analysis}
+
+The poor federated performance can be attributed to several fundamental issues in the current implementation:
+
+\begin{enumerate}
+    \item \textbf{Naive Aggregation Strategy}: The simple concatenation and random sampling approach discards potentially important features and does not intelligently combine knowledge from different clients.
+    
+    \item \textbf{Single Client per Category}: Each category's data resides on only one client, meaning there is no true federated aggregation—the server merely receives and downsamples individual memory banks.
+    
+    \item \textbf{Aggressive Downsampling}: Reducing memory banks from 65,000-150,000 features to just 50,000 through random sampling leads to significant information loss. For instance:
+    \begin{itemize}
+        \item underbody\_screw: 152,780 → 50,000 features (-67\% loss)
+        \item tank\_screw: 130,252 → 50,000 features (-62\% loss)
+        \item engine\_wiring: 116,736 → 50,000 features (-57\% loss)
+    \end{itemize}
+    
+    \item \textbf{Insufficient Training Rounds}: Only 3 federated rounds may be inadequate for convergence, though the lack of improvement across rounds suggests deeper architectural issues.
+\end{enumerate}
+
+\section{Conclusions and Future Steps}
+
+Our preliminary investigation demonstrates a significant performance gap between centralized and federated PatchCore implementations for industrial anomaly detection. While centralized models achieve respectable results (average pixel AUROC of 0.857), the federated approach suffers from 60-78\% performance degradation.
+
+\subsection{Identified Limitations}
+
+The current federated implementation exhibits critical weaknesses:
+
+\begin{itemize}
+    \item Naive memory bank aggregation that fails to preserve important features
+    \item Lack of intelligent coreset selection beyond random sampling
+    \item No mechanism for knowledge sharing between clients with different categories
+    \item Excessive feature compression during aggregation
+\end{itemize}
+
+\subsection{Future Directions for Stage 2}
+
+To address these limitations and advance trustworthy AI principles, we propose the following improvements:
+
+\subsubsection{Enhanced Aggregation Strategies}
+
+\begin{itemize}
+    \item Implement \textbf{greedy coreset selection} (k-Center algorithm) instead of random sampling to maintain better coverage of the normal feature space
+    \item Explore \textbf{weighted aggregation} based on local client performance or data quality metrics
+    \item Investigate \textbf{feature clustering} to identify and preserve diverse normal patterns during downsampling
+\end{itemize}
+
+\subsubsection{Privacy-Preserving Techniques}
+
+\begin{itemize}
+    \item Integrate \textbf{Differential Privacy (DP)} by adding calibrated noise to memory banks before transmission, measuring the privacy-utility tradeoff
+    \item Explore \textbf{secure aggregation protocols} to protect individual client contributions
+    \item Investigate \textbf{federated distillation} approaches that share knowledge without sharing raw features
+\end{itemize}
+
+\subsubsection{Explainability and Transparency}
+
+\begin{itemize}
+    \item Develop \textbf{XAI techniques} to visualize which features contribute most to anomaly detection decisions
+    \item Create \textbf{client contribution tracking} to understand how each facility's data improves the global model
+    \item Implement \textbf{anomaly explanation mechanisms} that highlight suspicious regions and provide interpretable justifications
+\end{itemize}
+
+\subsubsection{Experimental Improvements}
+
+\begin{itemize}
+    \item Increase federated training rounds (10-20 rounds) with early stopping based on validation performance
+    \item Create more realistic non-IID splits where clients share overlapping categories
+    \item Benchmark against additional baselines (e.g., PaDiM, FastFlow) to contextualize performance
+    \item Conduct ablation studies to isolate the impact of each design choice
+\end{itemize}
+
+By systematically addressing these dimensions—aggregation quality, privacy preservation, and explainability—we aim to develop a federated anomaly detection system that maintains competitive performance while respecting data confidentiality and providing transparent decision-making for industrial deployment.
+
+\bibliographystyle{plainnat}  % Choose a bibliography style (plainnat, ieee, etc.)
+\bibliography{references}  % Load the .bib file (without the .bib extension)
+
+\end{document}

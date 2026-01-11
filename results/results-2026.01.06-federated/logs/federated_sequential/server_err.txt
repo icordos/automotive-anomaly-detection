@@ -1,0 +1,19 @@
+2026-01-04 20:02:25,031 [INFO] [Server] Starting sequential server on 0.0.0.0:8081
+2026-01-04 20:03:18,312 [INFO] [Server] upload from client_id=1 addr=('127.0.0.1', 59998)
+2026-01-04 20:04:12,611 [INFO] [Server] upload from client_id=2 addr=('127.0.0.1', 60010)
+2026-01-04 20:05:09,193 [INFO] [Server] upload from client_id=3 addr=('127.0.0.1', 60306)
+2026-01-04 20:05:09,193 [INFO] [Server] All clients uploaded. Aggregating global memory banks...
+2026-01-04 20:05:09,205 [INFO] [Server] engine_wiring: received 5000 vectors (dim=1536) from 1 clients
+2026-01-04 20:05:09,205 [INFO] [Server] engine_wiring: global bank shape (5000, 1536)
+2026-01-04 20:05:09,213 [INFO] [Server] pipe_clip: received 5000 vectors (dim=1536) from 1 clients
+2026-01-04 20:05:09,214 [INFO] [Server] pipe_clip: global bank shape (5000, 1536)
+2026-01-04 20:05:09,227 [INFO] [Server] pipe_staple: received 5000 vectors (dim=1536) from 1 clients
+2026-01-04 20:05:09,227 [INFO] [Server] pipe_staple: global bank shape (5000, 1536)
+2026-01-04 20:05:09,239 [INFO] [Server] tank_screw: received 5000 vectors (dim=1536) from 1 clients
+2026-01-04 20:05:09,239 [INFO] [Server] tank_screw: global bank shape (5000, 1536)
+2026-01-04 20:05:09,246 [INFO] [Server] underbody_pipes: received 5000 vectors (dim=1536) from 1 clients
+2026-01-04 20:05:09,246 [INFO] [Server] underbody_pipes: global bank shape (5000, 1536)
+2026-01-04 20:05:09,253 [INFO] [Server] underbody_screw: received 5000 vectors (dim=1536) from 1 clients
+2026-01-04 20:05:09,253 [INFO] [Server] underbody_screw: global bank shape (5000, 1536)
+2026-01-04 20:05:09,341 [INFO] [Server] Saved global banks snapshot to federated_sequentially\artifacts\federated_sequential\server\global_memory_banks.pkl
+2026-01-04 20:14:48,017 [INFO] [Server] Server stopped.

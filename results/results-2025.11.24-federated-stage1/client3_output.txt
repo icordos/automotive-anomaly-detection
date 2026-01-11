@@ -1,0 +1,35 @@
+[Client 3] Connecting to server at 172.24.12.3:8080...
+[Client 3] Categories: ['underbody_pipes', 'underbody_screw']
+[Client 3] Starting local training...
+[Client 3] Training on category: underbody_pipes
+[Client 3] underbody_pipes: 65945 features extracted
+[Client 3] Training on category: underbody_screw
+[Client 3] underbody_screw: 152780 features extracted
+[Client 3] Starting evaluation...
+[Client 3] Evaluating on category: underbody_pipes
+[Client 3] Memory cleaned after underbody_pipes
+[Client 3] Evaluating on category: underbody_screw
+[Client 3] Memory cleaned after underbody_screw
+[Client 3] Final memory cleanup completed
+[Client 3] Starting local training...
+[Client 3] Training on category: underbody_pipes
+[Client 3] underbody_pipes: 65945 features extracted
+[Client 3] Training on category: underbody_screw
+[Client 3] underbody_screw: 152780 features extracted
+[Client 3] Starting evaluation...
+[Client 3] Evaluating on category: underbody_pipes
+[Client 3] Memory cleaned after underbody_pipes
+[Client 3] Evaluating on category: underbody_screw
+[Client 3] Memory cleaned after underbody_screw
+[Client 3] Final memory cleanup completed
+[Client 3] Starting local training...
+[Client 3] Training on category: underbody_pipes
+[Client 3] underbody_pipes: 65945 features extracted
+[Client 3] Training on category: underbody_screw
+[Client 3] underbody_screw: 152780 features extracted
+[Client 3] Starting evaluation...
+[Client 3] Evaluating on category: underbody_pipes
+[Client 3] Memory cleaned after underbody_pipes
+[Client 3] Evaluating on category: underbody_screw
+[Client 3] Memory cleaned after underbody_screw
+[Client 3] Final memory cleanup completed

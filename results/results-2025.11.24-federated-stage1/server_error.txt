@@ -1,0 +1,126 @@
+[93mWARNING [0m:   DEPRECATED FEATURE: flwr.server.start_server() is deprecated.
+	Instead, use the `flower-superlink` CLI command to start a SuperLink as shown below:
+
+		$ flower-superlink --insecure
+
+	To view usage and all available options, run:
+
+		$ flower-superlink --help
+
+	Using `start_server()` is deprecated.
+
+            This is a deprecated feature. It will be removed
+            entirely in future versions of Flower.
+        
+[92mINFO [0m:      Starting Flower server, config: num_rounds=3, no round_timeout
+[92mINFO [0m:      Flower ECE: gRPC server running (3 rounds), SSL is disabled
+[92mINFO [0m:      [INIT]
+[92mINFO [0m:      Requesting initial parameters from one random client
+[92mINFO [0m:      Received initial parameters from one random client
+[92mINFO [0m:      Starting evaluation of initial global parameters
+[92mINFO [0m:      Evaluation returned no results (`None`)
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 1]
+[92mINFO [0m:      configure_fit: strategy sampled 3 clients (out of 3)
+[92mINFO [0m:      aggregate_fit: received 3 results and 0 failures
+[92mINFO [0m:      configure_evaluate: strategy sampled 3 clients (out of 3)
+[92mINFO [0m:      aggregate_evaluate: received 3 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 2]
+[92mINFO [0m:      configure_fit: strategy sampled 3 clients (out of 3)
+[92mINFO [0m:      aggregate_fit: received 3 results and 0 failures
+[92mINFO [0m:      configure_evaluate: strategy sampled 3 clients (out of 3)
+[92mINFO [0m:      aggregate_evaluate: received 3 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [ROUND 3]
+[92mINFO [0m:      configure_fit: strategy sampled 3 clients (out of 3)
+[92mINFO [0m:      aggregate_fit: received 3 results and 0 failures
+[92mINFO [0m:      configure_evaluate: strategy sampled 3 clients (out of 3)
+[92mINFO [0m:      aggregate_evaluate: received 3 results and 0 failures
+[92mINFO [0m:      
+[92mINFO [0m:      [SUMMARY]
+[92mINFO [0m:      Run finished 3 round(s) in 1166.28s
+[92mINFO [0m:      	History (loss, distributed):
+[92mINFO [0m:      		round 1: -0.49954986572265625
+[92mINFO [0m:      		round 2: -0.6093752781550089
+[92mINFO [0m:      		round 3: -0.4910460412502289
+[92mINFO [0m:      	History (metrics, distributed, evaluate):
+[92mINFO [0m:      	{'avg_auroc': [(1, 0.49954986873578766),
+[92mINFO [0m:      	               (2, 0.6093752609363318),
+[92mINFO [0m:      	               (3, 0.4910460386536699)],
+[92mINFO [0m:      	 'engine_wiring_image_ap': [(1, 0.17753669025018062),
+[92mINFO [0m:      	                            (2, 0.19460861961786052),
+[92mINFO [0m:      	                            (3, 0.18023871338364597)],
+[92mINFO [0m:      	 'engine_wiring_image_roc_auc': [(1, 0.16601649050161638),
+[92mINFO [0m:      	                                 (2, 0.17313937016454176),
+[92mINFO [0m:      	                                 (3, 0.16796701899676728)],
+[92mINFO [0m:      	 'engine_wiring_pixel_ap': [(1, 0.0019898041126413806),
+[92mINFO [0m:      	                            (2, 0.002055699090164392),
+[92mINFO [0m:      	                            (3, 0.0019875843706694696)],
+[92mINFO [0m:      	 'engine_wiring_pixel_roc_auc': [(1, 0.23256149914755644),
+[92mINFO [0m:      	                                 (2, 0.23576330276042726),
+[92mINFO [0m:      	                                 (3, 0.23239923887259578)],
+[92mINFO [0m:      	 'loss': [(1, -0.49954986873578766),
+[92mINFO [0m:      	          (2, -0.6093752609363318),
+[92mINFO [0m:      	          (3, -0.4910460386536699)],
+[92mINFO [0m:      	 'pipe_clip_image_ap': [(1, 0.15214996143514814),
+[92mINFO [0m:      	                        (2, 0.14821183820254943),
+[92mINFO [0m:      	                        (3, 0.15385027449487299)],
+[92mINFO [0m:      	 'pipe_clip_image_roc_auc': [(1, 0.18562657999277718),
+[92mINFO [0m:      	                             (2, 0.18286986878536174),
+[92mINFO [0m:      	                             (3, 0.18386902612254724)],
+[92mINFO [0m:      	 'pipe_clip_pixel_ap': [(1, 0.0028764703589291398),
+[92mINFO [0m:      	                        (2, 0.0026662609920688834),
+[92mINFO [0m:      	                        (3, 0.002907213766492677)],
+[92mINFO [0m:      	 'pipe_clip_pixel_roc_auc': [(1, 0.21866478640569809),
+[92mINFO [0m:      	                             (2, 0.2095849137525675),
+[92mINFO [0m:      	                             (3, 0.21940026990231692)],
+[92mINFO [0m:      	 'pipe_staple_image_ap': [(1, 0.14830529131190237),
+[92mINFO [0m:      	                          (2, 0.14627641855994192),
+[92mINFO [0m:      	                          (3, 0.14993815446895112)],
+[92mINFO [0m:      	 'pipe_staple_image_roc_auc': [(1, 0.19017094017094016),
+[92mINFO [0m:      	                               (2, 0.19294417166757594),
+[92mINFO [0m:      	                               (3, 0.193777656543614)],
+[92mINFO [0m:      	 'pipe_staple_pixel_ap': [(1, 0.004536382641920146),
+[92mINFO [0m:      	                          (2, 0.004192977825311735),
+[92mINFO [0m:      	                          (3, 0.004550741783892381)],
+[92mINFO [0m:      	 'pipe_staple_pixel_roc_auc': [(1, 0.18371060720971208),
+[92mINFO [0m:      	                               (2, 0.1721373371598135),
+[92mINFO [0m:      	                               (3, 0.18388614676561985)],
+[92mINFO [0m:      	 'tank_screw_image_ap': [(1, 0.06740201200611055),
+[92mINFO [0m:      	                         (2, 0.08335297871249493),
+[92mINFO [0m:      	                         (3, 0.06911711532189614)],
+[92mINFO [0m:      	 'tank_screw_image_roc_auc': [(1, 0.1503254992827982),
+[92mINFO [0m:      	                              (2, 0.16998786273860753),
+[92mINFO [0m:      	                              (3, 0.15284122255323845)],
+[92mINFO [0m:      	 'tank_screw_pixel_ap': [(1, 0.0034242026118233163),
+[92mINFO [0m:      	                         (2, 0.00032966700866418413),
+[92mINFO [0m:      	                         (3, 0.0032089544449971055)],
+[92mINFO [0m:      	 'tank_screw_pixel_roc_auc': [(1, 0.30191577682875814),
+[92mINFO [0m:      	                              (2, 0.19592074520698807),
+[92mINFO [0m:      	                              (3, 0.30186127913329847)],
+[92mINFO [0m:      	 'underbody_pipes_image_ap': [(1, 0.18918339945174314),
+[92mINFO [0m:      	                              (2, 0.23010254491771964),
+[92mINFO [0m:      	                              (3, 0.18399870939243598)],
+[92mINFO [0m:      	 'underbody_pipes_image_roc_auc': [(1, 0.18515392924655685),
+[92mINFO [0m:      	                                   (2, 0.24485777297686562),
+[92mINFO [0m:      	                                   (3, 0.17935907822486274)],
+[92mINFO [0m:      	 'underbody_pipes_pixel_ap': [(1, 0.011174880786128896),
+[92mINFO [0m:      	                              (2, 0.01633171570102165),
+[92mINFO [0m:      	                              (3, 0.011414310062747427)],
+[92mINFO [0m:      	 'underbody_pipes_pixel_roc_auc': [(1, 0.2275933346860263),
+[92mINFO [0m:      	                                   (2, 0.2276386475808644),
+[92mINFO [0m:      	                                   (3, 0.22770985115545964)],
+[92mINFO [0m:      	 'underbody_screw_image_ap': [(1, 0.014206084587194103),
+[92mINFO [0m:      	                              (2, 0.029610209059573844),
+[92mINFO [0m:      	                              (3, 0.01306187863886269)],
+[92mINFO [0m:      	 'underbody_screw_image_roc_auc': [(1, 0.12180629827688651),
+[92mINFO [0m:      	                                   (2, 0.25495147553971087),
+[92mINFO [0m:      	                                   (3, 0.10427807486631015)],
+[92mINFO [0m:      	 'underbody_screw_pixel_ap': [(1, 0.00025132861516988594),
+[92mINFO [0m:      	                              (2, 0.020223333914576546),
+[92mINFO [0m:      	                              (3, 0.0002421447445178943)],
+[92mINFO [0m:      	 'underbody_screw_pixel_roc_auc': [(1, 0.294525534802697),
+[92mINFO [0m:      	                                   (2, 0.3323701828388129),
+[92mINFO [0m:      	                                   (3, 0.29431247398342614)]}
+[92mINFO [0m:      

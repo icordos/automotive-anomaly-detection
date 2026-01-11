@@ -1,0 +1,17 @@
+======================================
+Starting Client 2 + Client 3
+Job ID: 227988
+Node: dgxh100-precis-wn02
+======================================
+Waiting for server address...
+Server address: 172.24.12.3:8080
+Starting Client 2...
+Client 2 PID: 908126
+Starting Client 3...
+Client 3 PID: 908127
+Waiting for clients to complete...
+Client 2 finished
+Client 3 finished
+======================================
+Job complete!
+======================================

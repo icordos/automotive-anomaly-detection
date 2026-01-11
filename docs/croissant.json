@@ -1,0 +1,241 @@
+{
+    "@context": {
+      "@language": "en",
+      "@vocab": "https://schema.org/",
+      "citeAs": "cr:citeAs",
+      "column": "cr:column",
+      "conformsTo": "dct:conformsTo",
+      "cr": "http://mlcommons.org/croissant/",
+      "rai": "http://mlcommons.org/croissant/RAI/",
+      "data": {
+        "@id": "cr:data",
+        "@type": "@json"
+      },
+      "dataType": {
+        "@id": "cr:dataType",
+        "@type": "@vocab"
+      },
+      "dct": "http://purl.org/dc/terms/",
+      "examples": {
+        "@id": "cr:examples",
+        "@type": "@json"
+      },
+      "extract": "cr:extract",
+      "field": "cr:field",
+      "fileProperty": "cr:fileProperty",
+      "fileObject": "cr:fileObject",
+      "fileSet": "cr:fileSet",
+      "format": "cr:format",
+      "includes": "cr:includes",
+      "isLiveDataset": "cr:isLiveDataset",
+      "jsonPath": "cr:jsonPath",
+      "key": "cr:key",
+      "md5": "cr:md5",
+      "parentField": "cr:parentField",
+      "path": "cr:path",
+      "recordSet": "cr:recordSet",
+      "references": "cr:references",
+      "regex": "cr:regex",
+      "repeated": "cr:repeated",
+      "replace": "cr:replace",
+      "sc": "https://schema.org/",
+      "separator": "cr:separator",
+      "source": "cr:source",
+      "subField": "cr:subField",
+      "transform": "cr:transform"
+    },
+    "@type": "sc:Dataset",
+    "dct:conformsTo": "http://mlcommons.org/croissant/1.0",
+    "description": "The Automotive Visual Inspection Dataset (AutoVI): A Genuine Industrial Production Dataset for Unsupervised Anomaly Detection",
+    "license": "https://creativecommons.org/licenses/by-nc-sa/4.0/",
+    "name": "AutoVI",
+    "url": "https://doi.org/10.5281/zenodo.10459003",
+    "creator": [{
+      "@type": "Person",
+      "affiliation": {
+        "@type": "Organization",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Compiègne, France"
+        },
+        "name": "Roberval, Université de technologie de Compiègne"
+      },
+      "email": "philippe.carvalho(at)utc.fr",
+      "name": "Philippe Carvalho"
+  
+      },{
+  
+        "@type": "Person",
+        "affiliation": {
+          "@type": "Organization",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Guyancourt, France"
+          },
+          "name": "Renault Group"
+        },
+        "email": "meriem.lafou(at)renault.com",
+        "name": "Meriem Lafou"
+  
+      },{
+  
+        "@type": "Person",
+        "affiliation": {
+          "@type": "Organization",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Compiègne, France"
+          },
+          "name": "Roberval, Université de technologie de Compiègne"
+        },
+        "email": "alexandre.durupt(at)utc.fr",
+        "name": "Alexandre Durupt"
+  
+      },{
+  
+        "@type": "Person",
+        "affiliation": {
+          "@type": "Organization",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Guyancourt, France"
+          },
+          "name": "Renault Group"
+        },
+        "email": "antoine.leblanc(at)renault.com",
+        "name": "Antoine Leblanc"
+  
+      },{
+  
+        "@type": "Person",
+        "affiliation": {
+          "@type": "Organization",
+          "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Compiègne, France"
+          },
+          "name": "Heudiasyc, UMR CNRS 7253, Université de technologie de Compiègne"
+        },
+        "email": "yves.grandvalet(at)utc.fr",
+        "name": "Yves Grandvalet"
+  
+      }
+    ],
+    "datePublished": "2024-02-29",
+    
+    "keywords": "visual inspection, defect detection, anomaly detection, unsupervised learning, machine learning, deep learning, automotive industry, industrial production, dataset, image dataset",
+    "publisher": [{
+      "@type": "Organization",
+      "name": "Zenodo"
+    }],
+    "version": "1.0.0",
+  
+    "isLiveDataset": false,
+    "citeAs": "@dataset{carvalho_2024_10459003,\nauthor = {Carvalho, Philippe and Lafou, Meriem and Durupt, Alexandre and Leblanc, Antoine and Grandvalet, Yves},\ntitle        = {{The Automotive Visual Inspection Dataset (AutoVI): A Genuine Industrial Production Dataset for Unsupervised Anomaly Detection}},\nmonth        = feb,\nyear         = 2024,\npublisher    = {Zenodo},\nversion      = {1.0.0},\ndoi          = {10.5281/zenodo.10459003},\nurl          = {https://doi.org/10.5281/zenodo.10459003}}",
+  
+    "distribution": [
+      {
+        "@type": "cr:FileObject",
+        "@id": "data/engine_wiring",
+        "contentSize": "249059163 B",
+        "contentUrl": "https://zenodo.org/records/10459003/files/engine_wiring.zip",
+        "encodingFormat": "application/zip",
+        "name": "engine_wiring.zip",
+        "sha256": "252590d3249f7fbdf83a7e9b735ef0df175adc218460247e9a63bef1c03d420c"
+      },
+      {
+        "@type": "cr:FileObject",
+        "@id": "data/pipe_clip",
+        "contentSize": "144021409 B",
+        "contentUrl": "https://zenodo.org/records/10459003/files/pipe_clip.zip",
+        "encodingFormat": "application/zip",
+        "name": "pipe_clip.zip",
+        "sha256": "955bb17b3a471e23979f46f998a4723acd00cf3afc4d5edf0578dfb6ea80d6c3"
+      },
+      {
+        "@type": "cr:FileObject",
+        "@id": "data/pipe_staple",
+        "contentSize": "106153684 B",
+        "contentUrl": "https://zenodo.org/records/10459003/files/pipe_staple.zip",
+        "encodingFormat": "application/zip",
+        "name": "pipe_staple.zip",
+        "sha256": "fb9287f2cc86d660310e9886fdebbe2bd17269e853e29d06d708c6a996df1b18"
+      },
+      {
+        "@type": "cr:FileObject",
+        "@id": "data/tank_screw",
+        "contentSize": "1172738255 B",
+        "contentUrl": "https://zenodo.org/records/10459003/files/tank_screw.zip",
+        "encodingFormat": "application/zip",
+        "name": "tank_screw.zip",
+        "sha256": "48d7193164b36de03cc10c9f7b1b64ea98a0ce7aa57867c8f1d96341c497b4b0"
+      },
+      {
+        "@type": "cr:FileObject",
+        "@id": "data/underbody_pipes",
+        "contentSize": "950320460 B",
+        "contentUrl": "https://zenodo.org/records/10459003/files/underbody_pipes.zip",
+        "encodingFormat": "application/zip",
+        "name": "underbody_pipes.zip",
+        "sha256": "fc1e53336d46fb2317d71e95c011bac012b609f2898fdb02780c920c19a113c7"
+      },
+      {
+        "@type": "cr:FileObject",
+        "@id": "data/underbody_screw",
+        "contentSize": "1346723786 B",
+        "contentUrl": "https://zenodo.org/records/10459003/files/underbody_screw.zip",
+        "encodingFormat": "application/zip",
+        "name": "underbody_screw.zip",
+        "sha256": "3e9bf6a43033a22c7c9f927a43c392a3b037d22580a27a48d379d4504d9cc6cf"
+      },
+  
+      {
+        "@type": "cr:FileSet",
+        "@id": "data/engine_wiring/images",
+        "encodingFormat": "image/png",
+        "containedIn": { "@id": "data/engine_wiring" },
+        "includes": "**.png",
+        "excludes": "engine_wiring/defect_example.png"
+      },
+      {
+        "@type": "cr:FileSet",
+        "@id": "data/pipe_clip/images",
+        "encodingFormat": "image/png",
+        "containedIn": { "@id": "data/pipe_clip" },
+        "includes": "**.png",
+        "excludes": "pipe_clip/defect_example.png"
+      },
+      {
+        "@type": "cr:FileSet",
+        "@id": "data/pipe_staple/images",
+        "encodingFormat": "image/png",
+        "containedIn": { "@id": "data/pipe_staple" },
+        "includes": "**.png",
+        "excludes": "pipe_staple/defect_example.png"
+      },
+      {
+        "@type": "cr:FileSet",
+        "@id": "data/tank_screw/images",
+        "encodingFormat": "image/png",
+        "containedIn": { "@id": "data/tank_screw" },
+        "includes": "**.png",
+        "excludes": "tank_screw/defect_example.png"
+      },
+      {
+        "@type": "cr:FileSet",
+        "@id": "data/underbody_pipes/images",
+        "encodingFormat": "image/png",
+        "containedIn": { "@id": "data/underbody_pipes" },
+        "includes": "**.png",
+        "excludes": "underbody_pipes/defect_example.png"
+      },
+      {
+        "@type": "cr:FileSet",
+        "@id": "data/underbody_screw/images",
+        "encodingFormat": "image/png",
+        "containedIn": { "@id": "data/underbody_screw" },
+        "includes": "**.png",
+        "excludes": "underbody_screw/defect_example.png"
+      }
+    ]
+  }
