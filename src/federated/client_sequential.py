@@ -50,6 +50,53 @@ def rpc(server_host: str, server_port: int, payload: dict, timeout_s: float = 12
         return recv_msg(sock)
 
 
+# ============================================
+# Differential Privacy: RDP Accounting
+# ============================================
+
+def _rdp_epsilon(
+    noise_multiplier: float,
+    steps: int,
+    delta: float,
+    orders: List[float],
+) -> Tuple[float, float]:
+    """
+    Compute epsilon using Renyi Differential Privacy accounting.
+    
+    Args:
+        noise_multiplier: Noise scale (sigma)
+        steps: Number of composition steps
+        delta: Failure probability
+        orders: List of Renyi orders to try
+    
+    Returns:
+        (epsilon, best_order): Tightest epsilon and corresponding order
+    """
+    if noise_multiplier <= 0:
+        raise ValueError("noise_multiplier must be > 0 for RDP accounting.")
+    if steps <= 0:
+        return 0.0, orders[0]
+    if delta <= 0 or delta >= 1:
+        raise ValueError("delta must be in (0, 1) for RDP accounting.")
+
+    # Compute RDP at each order
+    rdp = [(steps * order) / (2.0 * noise_multiplier ** 2) for order in orders]
+    
+    # Convert RDP to (epsilon, delta)-DP
+    epsilons = [
+        r + (np.log(1.0 / delta) / (order - 1.0))
+        for r, order in zip(rdp, orders)
+    ]
+    
+    # Return tightest bound
+    min_idx = int(np.argmin(epsilons))
+    return float(epsilons[min_idx]), float(orders[min_idx])
+
+
+# ============================================
+# Sequential PatchCore Client
+# ============================================
+
 class SequentialPatchCoreClient:
     def __init__(
         self,
@@ -62,7 +109,7 @@ class SequentialPatchCoreClient:
         dp_delta: float,
         dp_clip_norm: float,
         dp_seed: int | None,
-        fairness_mode: str = "none",  # NEW
+        fairness_mode: str = "none",
     ) -> None:
         self.client_id = client_id
         self.categories = categories
@@ -73,7 +120,7 @@ class SequentialPatchCoreClient:
         self.dp_delta = dp_delta
         self.dp_clip_norm = dp_clip_norm
         self.dp_seed = dp_seed
-        self.fairness_mode = fairness_mode  # NEW
+        self.fairness_mode = fairness_mode
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         self.trainer = PatchCoreTrainer(config)
@@ -105,10 +152,111 @@ class SequentialPatchCoreClient:
             import gc
             gc.collect()
 
+    def _apply_dp(self, banks_np: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+        """
+        Apply Differential Privacy to memory banks via Gaussian mechanism.
+        
+        Implements:
+        1. L2 norm clipping of each feature vector
+        2. Gaussian noise addition calibrated to (epsilon, delta)
+        3. RDP accounting for privacy budget tracking
+        
+        Args:
+            banks_np: Dict mapping category -> memory bank (numpy array)
+        
+        Returns:
+            Dict with DP-protected memory banks
+        """
+        if not self.dp_enabled:
+            return banks_np
+            
+        if self.dp_epsilon <= 0:
+            raise ValueError("dp_epsilon must be > 0 when DP is enabled.")
+        if self.dp_delta <= 0 or self.dp_delta >= 1:
+            raise ValueError("dp_delta must be in (0, 1) when DP is enabled.")
+        if self.dp_clip_norm <= 0:
+            raise ValueError("dp_clip_norm must be > 0 when DP is enabled.")
+
+        # Compute noise scale from epsilon/delta using Gaussian mechanism
+        # sigma = sqrt(2 * ln(1.25/delta)) / epsilon
+        sigma = float(np.sqrt(2 * np.log(1.25 / self.dp_delta)) / self.dp_epsilon)
+        noise_std = sigma * self.dp_clip_norm
+        
+        rng = np.random.default_rng(self.dp_seed)
+
+        dp_banks: Dict[str, np.ndarray] = {}
+        
+        for cat, mb in banks_np.items():
+            if mb.size == 0:
+                dp_banks[cat] = mb
+                continue
+                
+            # Step 1: L2 norm clipping
+            # Clip each row (feature vector) to have max L2 norm = dp_clip_norm
+            norms = np.linalg.norm(mb, axis=1, keepdims=True)  # Shape: (N, 1)
+            scale = np.minimum(1.0, self.dp_clip_norm / (norms + 1e-12))
+            clipped = mb * scale
+            
+            # Step 2: Add Gaussian noise
+            # noise ~ N(0, noise_std^2 * I)
+            noise = rng.normal(0.0, noise_std, size=clipped.shape).astype(clipped.dtype, copy=False)
+            dp_banks[cat] = clipped + noise
+            
+            logging.info(
+                "[Client %d] Applied DP to %s: original_shape=%s, clipped_norms_mean=%.4f, noise_std=%.4f",
+                self.client_id,
+                cat,
+                mb.shape,
+                float(np.mean(norms)),
+                noise_std,
+            )
+
+        # RDP accounting for privacy budget tracking
+        steps = max(1, len(banks_np))  # Number of categories = composition steps
+        orders = [1.25, 1.5, 2, 3, 4, 5, 8, 10, 16, 32, 64, 128]
+        rdp_eps, rdp_order = _rdp_epsilon(sigma, steps, self.dp_delta, orders)
+        
+        logging.info(
+            "[Client %d] DP Summary: per_release_eps=%.4f, delta=%.2e, clip_norm=%.3f, sigma=%.4f, "
+            "rdp_eps=%.4f (order=%.2f, steps=%d)",
+            self.client_id,
+            self.dp_epsilon,
+            self.dp_delta,
+            self.dp_clip_norm,
+            sigma,
+            rdp_eps,
+            rdp_order,
+            steps,
+        )
+        
+        # Save privacy budget to JSON
+        budget_path = self.output_dir / f"client_{self.client_id}_dp_budget.json"
+        budget_payload = {
+            "client_id": self.client_id,
+            "per_release_epsilon": float(self.dp_epsilon),
+            "delta": float(self.dp_delta),
+            "clip_norm": float(self.dp_clip_norm),
+            "sigma": float(sigma),
+            "noise_std": float(noise_std),
+            "composition_steps": int(steps),
+            "rdp_epsilon": float(rdp_eps),
+            "rdp_order": float(rdp_order),
+            "categories": list(banks_np.keys()),
+        }
+        with open(budget_path, "w", encoding="utf-8") as f:
+            json.dump(budget_payload, f, indent=2)
+        logging.info("[Client %d] Wrote DP budget to %s", self.client_id, budget_path)
+        
+        return dp_banks
+
     def upload(self, server_host: str, server_port: int) -> None:
+        """Upload local memory banks to server, optionally with DP."""
         banks_np: Dict[str, np.ndarray] = {}
         for cat, mb in self.local_memory_banks.items():
             banks_np[cat] = mb.cpu().numpy().astype(np.float32, copy=False)
+
+        # Apply DP if enabled
+        banks_np = self._apply_dp(banks_np)
 
         payload = {
             "action": "upload",
@@ -120,9 +268,10 @@ class SequentialPatchCoreClient:
         resp = rpc(server_host, server_port, payload, timeout_s=300.0)
         if not resp.get("ok"):
             raise RuntimeError(f"Upload failed: {resp}")
-        logging.info("[Client %d] Upload OK", self.client_id)
+        logging.info("[Client %d] Upload OK (DP=%s)", self.client_id, self.dp_enabled)
 
     def download_global(self, server_host: str, server_port: int) -> Tuple[Dict[str, torch.Tensor], Dict[str, Tuple[int, int]]]:
+        """Download global aggregated memory banks from server."""
         resp = rpc(
             server_host,
             server_port,
@@ -142,6 +291,7 @@ class SequentialPatchCoreClient:
         return banks_t, shapes_t
 
     def evaluate_with_global(self, server_host: str, server_port: int, enable_fairness: bool = False) -> Dict[str, float]:
+        """Evaluate local test data using global memory banks."""
         global_banks, _ = self.download_global(server_host, server_port)
 
         all_metrics: Dict[str, float] = {}
@@ -150,7 +300,7 @@ class SequentialPatchCoreClient:
         
         # Fairness tracking
         if enable_fairness:
-            from fairness_utils import SubgroupDetector, FairnessEvaluator, save_fairness_report, log_fairness_summary
+            from fairness_utils import save_fairness_report, log_fairness_summary
 
         for cat in self.categories:
             if cat not in global_banks:
@@ -194,7 +344,9 @@ class SequentialPatchCoreClient:
         return all_metrics
 
 
-# În client_sequential.py, funcția parse_args():
+# ============================================
+# CLI Argument Parsing
+# ============================================
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Sequential Federated PatchCore Client")
@@ -223,14 +375,14 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--train-partition-id", type=int, default=0)
     p.add_argument("--train-num-partitions", type=int, default=1)
     
-    # DP arguments
+    # Differential Privacy arguments
     p.add_argument("--dp", action="store_true", help="Enable client-side DP before upload")
-    p.add_argument("--dp-epsilon", type=float, default=1.0)
-    p.add_argument("--dp-delta", type=float, default=1e-5)
-    p.add_argument("--dp-clip-norm", type=float, default=1.0)
-    p.add_argument("--dp-seed", type=int, default=None)
+    p.add_argument("--dp-epsilon", type=float, default=1.0, help="Privacy budget (lower = more private)")
+    p.add_argument("--dp-delta", type=float, default=1e-5, help="Failure probability")
+    p.add_argument("--dp-clip-norm", type=float, default=1.0, help="L2 norm clipping threshold")
+    p.add_argument("--dp-seed", type=int, default=None, help="Random seed for DP noise")
     
-    # NEW: Fairness argument
+    # Fairness arguments
     p.add_argument(
         "--fairness-coreset-mode",
         type=str,
@@ -242,9 +394,16 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
+# ============================================
+# Main Entry Point
+# ============================================
+
 def main() -> None:
     args = parse_args()
-    logging.basicConfig(level=getattr(logging, args.log_level.upper()), format="%(asctime)s [%(levelname)s] %(message)s")
+    logging.basicConfig(
+        level=getattr(logging, args.log_level.upper()), 
+        format="%(asctime)s [%(levelname)s] %(message)s"
+    )
 
     client_out_dir = args.output_dir / f"client_{args.client_id}"
     client_out_dir.mkdir(parents=True, exist_ok=True)
@@ -276,7 +435,7 @@ def main() -> None:
         dp_delta=args.dp_delta,
         dp_clip_norm=args.dp_clip_norm,
         dp_seed=args.dp_seed,
-        fairness_mode=args.fairness_coreset_mode,  # NEW
+        fairness_mode=args.fairness_coreset_mode,
     )
 
     if args.mode == "upload":
@@ -291,4 +450,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
