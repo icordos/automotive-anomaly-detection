@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Run the sequential federated PatchCore pipeline (1 round, server k-center aggregation).
 
 This script:
@@ -95,6 +96,11 @@ def parse_args() -> argparse.Namespace:
 
     p.add_argument("--device", type=str, default="cuda")
     p.add_argument("--log-level", type=str, default="INFO")
+    p.add_argument("--dp", action="store_true", help="Enable client-side DP before upload")
+    p.add_argument("--dp-epsilon", type=float, default=1.0)
+    p.add_argument("--dp-delta", type=float, default=1e-5)
+    p.add_argument("--dp-clip-norm", type=float, default=1.0)
+    p.add_argument("--dp-seed", type=int, default=None)
     return p.parse_args()
 
 
@@ -156,6 +162,17 @@ def main() -> None:
         "--device", args.device,
         "--log-level", args.log_level,
     ]
+    if args.dp:
+        common_client_args.extend(
+            [
+                "--dp",
+                "--dp-epsilon", str(args.dp_epsilon),
+                "--dp-delta", str(args.dp_delta),
+                "--dp-clip-norm", str(args.dp_clip_norm),
+            ]
+        )
+        if args.dp_seed is not None:
+            common_client_args.extend(["--dp-seed", str(args.dp_seed)])
 
     # Upload phase (sequential)
     for c in clients:
