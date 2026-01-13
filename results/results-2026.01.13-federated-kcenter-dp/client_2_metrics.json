@@ -1,0 +1,12 @@
+{
+  "pipe_staple_image_roc_auc": 0.5794689943626113,
+  "pipe_staple_pixel_roc_auc": 0.5164860265157043,
+  "pipe_staple_image_ap": 0.4968580410228157,
+  "pipe_staple_pixel_ap": 0.012699454652494809,
+  "tank_screw_image_roc_auc": 0.4499172459450513,
+  "tank_screw_pixel_roc_auc": 0.6207990894009889,
+  "tank_screw_image_ap": 0.19963458710321397,
+  "tank_screw_pixel_ap": 0.0011354692299701892,
+  "avg_auroc": 0.5146931201538313,
+  "total_test_images": 718.0
+}
