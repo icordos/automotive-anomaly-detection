@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """PatchCore training loop for AutoVI datasets.
 
 Builds a memory bank of nominal patch features for each category and supports
@@ -280,18 +279,41 @@ class PatchCoreTrainer:
             pin_memory=True,
         )
 
-    def fit(self, category: str) -> Tuple[Path, Tensor, Optional[Tuple[int, int]]]:
+    # În patchcore_training.py, metoda fit():
+
+    def fit(
+        self, 
+        category: str,
+        fairness_mode: str = "none",
+        subgroup_metadata: Optional[Dict[str, str]] = None,
+    ) -> Tuple[Path, Tensor, Optional[Tuple[int, int]]]:
+        """Fit PatchCore model on training data."""
         loader = self._loader(category, "train")
         logging.info("Starting feature extraction for %s (images=%d)", category, len(loader.dataset))
         log_gpu_memory("[Before training] ")
         start_time = time.perf_counter()
+        
         feature_chunks: List[Tensor] = []
         patch_shape: Optional[Tuple[int, int]] = None
+        image_paths: List[Path] = []
+        patches_per_image: List[int] = []  # NEW: Track exact patch count per image
+        
+        # Collect dataset items for subgroup detection
+        dataset = loader.dataset
+        if hasattr(dataset, 'items'):
+            image_paths = [item[0] for item in dataset.items]
+        
         for images, _, _ in tqdm(loader, desc=f"Extracting {category} features"):
             images = images.to(self.model.device)
             feats = self.model.extract(images)
             embeddings, patch_shape = self.model.aggregate(feats)
+            
+            # Track how many patches each image produced
+            batch_patches = embeddings.shape[0] * embeddings.shape[1]  # bsz * num_patches
+            patches_per_image.extend([embeddings.shape[1]] * images.shape[0])
+            
             feature_chunks.append(embeddings.reshape(-1, embeddings.shape[-1]).cpu())
+        
         if not feature_chunks:
             raise RuntimeError(f"No training data found for category '{category}'")
 
@@ -307,7 +329,59 @@ class PatchCoreTrainer:
         )
         log_gpu_memory("[After extraction] ")
 
-        memory_bank = self._apply_coreset(memory_bank)
+        # Fairness-aware coreset sampling
+        subgroup_labels = None
+        if fairness_mode != "none" and image_paths:
+            try:
+                from fairness_utils import SubgroupDetector
+                
+                # Detect subgroups from paths
+                subgroup_assignments = SubgroupDetector.detect_from_paths(
+                    image_paths, category
+                )
+                
+                # Create mapping: subgroup_name -> subgroup_id
+                subgroup_name_to_id = {name: idx for idx, name in enumerate(subgroup_assignments.keys())}
+                
+                # Build per-patch subgroup labels
+                subgroup_labels = []
+                patch_offset = 0
+                
+                for img_idx, img_path in enumerate(image_paths):
+                    # Find which subgroup this image belongs to
+                    subgroup_id = 0  # Default
+                    for sg_name, sg_image_indices in subgroup_assignments.items():
+                        if img_idx in sg_image_indices:
+                            subgroup_id = subgroup_name_to_id[sg_name]
+                            break
+                    
+                    # Assign same subgroup to ALL patches from this image
+                    num_patches_from_this_image = patches_per_image[img_idx]
+                    subgroup_labels.extend([subgroup_id] * num_patches_from_this_image)
+                
+                subgroup_labels = np.array(subgroup_labels[:memory_bank.shape[0]])
+                
+                logging.info(
+                    "Detected %d subgroups for %s (%d patches, %d images)",
+                    len(subgroup_assignments),
+                    category,
+                    len(subgroup_labels),
+                    len(image_paths),
+                )
+            
+            except ImportError:
+                logging.warning("fairness_utils not available. Using standard coreset.")
+                fairness_mode = "none"
+            except Exception as e:
+                logging.exception("Subgroup detection failed: %s. Using standard coreset.", e)
+                fairness_mode = "none"
+        
+        # Apply coreset sampling (fairness-aware or standard)
+        if fairness_mode != "none" and subgroup_labels is not None:
+            memory_bank = self.apply_fair_coreset(memory_bank, subgroup_labels, fairness_mode)
+        else:
+            memory_bank = self._apply_coreset(memory_bank)
+        
         self.memory_bank = memory_bank.to(self.model.device)
         checkpoint_path = self._save_checkpoint(category, memory_bank, patch_shape)
         logging.info(
@@ -322,6 +396,73 @@ class PatchCoreTrainer:
     def load_memory_bank(self, memory_bank: Tensor) -> None:
         self.memory_bank = memory_bank.to(self.model.device)
         logging.info("Loaded memory bank with %d features", self.memory_bank.shape[0])
+
+    def apply_fair_coreset(
+        self,
+        features: Tensor,
+        subgroup_labels: Optional[np.ndarray] = None,
+        fairness_mode: str = "none",
+    ) -> Tensor:
+        """Apply coreset sampling with optional fairness constraints.
+        
+        Args:
+            features: (N, D) feature tensor
+            subgroup_labels: (N,) subgroup assignments (optional)
+            fairness_mode: 'none', 'proportional', 'equal'
+        
+        Returns:
+            Tensor: Selected features after fairness-aware coreset sampling
+        """
+        if fairness_mode == "none" or subgroup_labels is None:
+            return self._apply_coreset(features)
+        
+        # Import fairness utilities
+        try:
+            from fairness_utils import FairCoreset
+        except ImportError:
+            logging.warning(
+                "fairness_utils not found. Falling back to standard coreset sampling."
+            )
+            return self._apply_coreset(features)
+        
+        ratio = self.config.coreset_sampling_ratio
+        total = features.shape[0]
+        target = max(1, int(total * ratio))
+        
+        if self.config.coreset_max_samples is not None:
+            target = min(target, self.config.coreset_max_samples)
+        
+        if target >= total:
+            logging.info(
+                "Fairness coreset target (%d) >= total (%d); returning original features",
+                target,
+                total,
+            )
+            return features
+        
+        logging.info(
+            "Applying fairness-aware coreset (%s): %d -> %d",
+            fairness_mode,
+            total,
+            target,
+        )
+        
+        start_time = time.perf_counter()
+        
+        # Convert to CPU for fairness sampling
+        features_cpu = features.cpu()
+        
+        indices = FairCoreset.balanced_sampling(
+            features_cpu, subgroup_labels, target, method=fairness_mode
+        )
+        
+        logging.info(
+            "Fairness-aware coreset sampling (%s) finished in %.2fs",
+            fairness_mode,
+            time.perf_counter() - start_time,
+        )
+        
+        return features[indices]
 
     def _apply_coreset(self, features: Tensor) -> Tensor:
         ratio = self.config.coreset_sampling_ratio
@@ -544,6 +685,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--skip-eval", action="store_true")
     parser.add_argument("--log-level", type=str, default="INFO")
+    
+    # NEW: Fairness arguments
+    parser.add_argument(
+        "--fairness-coreset-mode",
+        type=str,
+        default="none",
+        choices=["none", "proportional", "equal"],
+        help="Fairness-aware coreset sampling mode",
+    )
+    
     return parser.parse_args()
 
 
@@ -584,17 +735,27 @@ def main() -> None:
         use_mixed_precision=not args.no_mixed_precision,
         device=args.device,
     )
+    
     trainer = PatchCoreTrainer(config)
     summary: Dict[str, Dict[str, Optional[Dict[str, float]]]] = {}
+    
     for category in categories:
-        checkpoint_path, _, _ = trainer.fit(category)
+        # Use fairness-aware coreset if specified
+        checkpoint_path, _, _ = trainer.fit(
+            category, 
+            fairness_mode=args.fairness_coreset_mode
+        )
+        
         metrics_dict = None
         if not args.skip_eval:
             metrics_dict, _ = trainer.evaluate(category)
             logging.info("%s metrics: %s", category, metrics_dict)
+        
         summary[category] = {"checkpoint": str(checkpoint_path), "metrics": metrics_dict}
+    
     print(json.dumps(summary, indent=2))
 
 
 if __name__ == "__main__":
     main()
+

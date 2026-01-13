@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Sequential Federated PatchCore Server (no Flower).
 
 - Keeps server online.

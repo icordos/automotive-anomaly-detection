@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Sequential Federated PatchCore Client (no Flower).
 
 Modes:
@@ -51,28 +50,6 @@ def rpc(server_host: str, server_port: int, payload: dict, timeout_s: float = 12
         return recv_msg(sock)
 
 
-def _rdp_epsilon(
-    noise_multiplier: float,
-    steps: int,
-    delta: float,
-    orders: List[float],
-) -> Tuple[float, float]:
-    if noise_multiplier <= 0:
-        raise ValueError("noise_multiplier must be > 0 for RDP accounting.")
-    if steps <= 0:
-        return 0.0, orders[0]
-    if delta <= 0 or delta >= 1:
-        raise ValueError("delta must be in (0, 1) for RDP accounting.")
-
-    rdp = [(steps * order) / (2.0 * noise_multiplier ** 2) for order in orders]
-    epsilons = [
-        r + (np.log(1.0 / delta) / (order - 1.0))
-        for r, order in zip(rdp, orders)
-    ]
-    min_idx = int(np.argmin(epsilons))
-    return float(epsilons[min_idx]), float(orders[min_idx])
-
-
 class SequentialPatchCoreClient:
     def __init__(
         self,
@@ -85,6 +62,7 @@ class SequentialPatchCoreClient:
         dp_delta: float,
         dp_clip_norm: float,
         dp_seed: int | None,
+        fairness_mode: str = "none",  # NEW
     ) -> None:
         self.client_id = client_id
         self.categories = categories
@@ -95,6 +73,7 @@ class SequentialPatchCoreClient:
         self.dp_delta = dp_delta
         self.dp_clip_norm = dp_clip_norm
         self.dp_seed = dp_seed
+        self.fairness_mode = fairness_mode  # NEW
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         self.trainer = PatchCoreTrainer(config)
@@ -104,8 +83,15 @@ class SequentialPatchCoreClient:
     def build_local_banks(self) -> None:
         logging.info("[Client %d] Building local memory banks for categories: %s", self.client_id, self.categories)
         for category in self.categories:
-            logging.info("[Client %d] fit(%s) start", self.client_id, category)
-            checkpoint_path, memory_bank, patch_shape = self.trainer.fit(category)
+            logging.info("[Client %d] fit(%s) start with fairness_mode=%s", 
+                        self.client_id, category, self.fairness_mode)
+            
+            # Pass fairness_mode to trainer
+            checkpoint_path, memory_bank, patch_shape = self.trainer.fit(
+                category,
+                fairness_mode=self.fairness_mode
+            )
+            
             self.local_memory_banks[category] = memory_bank
             self.patch_shapes[category] = patch_shape
             logging.info(
@@ -119,66 +105,10 @@ class SequentialPatchCoreClient:
             import gc
             gc.collect()
 
-    def _apply_dp(self, banks_np: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
-        if not self.dp_enabled:
-            return banks_np
-        if self.dp_epsilon <= 0:
-            raise ValueError("dp_epsilon must be > 0 when DP is enabled.")
-        if self.dp_delta <= 0 or self.dp_delta >= 1:
-            raise ValueError("dp_delta must be in (0, 1) when DP is enabled.")
-        if self.dp_clip_norm <= 0:
-            raise ValueError("dp_clip_norm must be > 0 when DP is enabled.")
-
-        sigma = float(np.sqrt(2 * np.log(1.25 / self.dp_delta)) / self.dp_epsilon)
-        noise_std = sigma * self.dp_clip_norm
-        rng = np.random.default_rng(self.dp_seed)
-
-        dp_banks: Dict[str, np.ndarray] = {}
-        for cat, mb in banks_np.items():
-            if mb.size == 0:
-                dp_banks[cat] = mb
-                continue
-            norms = np.linalg.norm(mb, axis=1, keepdims=True)
-            scale = np.minimum(1.0, self.dp_clip_norm / (norms + 1e-12))
-            clipped = mb * scale
-            noise = rng.normal(0.0, noise_std, size=clipped.shape).astype(clipped.dtype, copy=False)
-            dp_banks[cat] = clipped + noise
-
-        steps = max(1, len(banks_np))
-        orders = [1.25, 1.5, 2, 3, 4, 5, 8, 10, 16, 32, 64, 128]
-        rdp_eps, rdp_order = _rdp_epsilon(sigma, steps, self.dp_delta, orders)
-        logging.info(
-            "[Client %d] DP enabled: per_release_eps=%.4f delta=%.2e clip=%.3f sigma=%.4f rdp_eps=%.4f (order=%.2f, steps=%d)",
-            self.client_id,
-            self.dp_epsilon,
-            self.dp_delta,
-            self.dp_clip_norm,
-            sigma,
-            rdp_eps,
-            rdp_order,
-            steps,
-        )
-        budget_path = self.output_dir / f"client_{self.client_id}_dp_budget.json"
-        budget_payload = {
-            "client_id": self.client_id,
-            "per_release_eps": float(self.dp_epsilon),
-            "delta": float(self.dp_delta),
-            "clip_norm": float(self.dp_clip_norm),
-            "sigma": float(sigma),
-            "steps": int(steps),
-            "rdp_eps": float(rdp_eps),
-            "rdp_order": float(rdp_order),
-        }
-        with open(budget_path, "w", encoding="utf-8") as f:
-            json.dump(budget_payload, f, indent=2)
-        logging.info("[Client %d] Wrote DP budget to %s", self.client_id, budget_path)
-        return dp_banks
-
     def upload(self, server_host: str, server_port: int) -> None:
         banks_np: Dict[str, np.ndarray] = {}
         for cat, mb in self.local_memory_banks.items():
             banks_np[cat] = mb.cpu().numpy().astype(np.float32, copy=False)
-        banks_np = self._apply_dp(banks_np)
 
         payload = {
             "action": "upload",
@@ -211,12 +141,16 @@ class SequentialPatchCoreClient:
                 shapes_t[cat] = tuple(shapes[cat])
         return banks_t, shapes_t
 
-    def evaluate_with_global(self, server_host: str, server_port: int) -> Dict[str, float]:
+    def evaluate_with_global(self, server_host: str, server_port: int, enable_fairness: bool = False) -> Dict[str, float]:
         global_banks, _ = self.download_global(server_host, server_port)
 
         all_metrics: Dict[str, float] = {}
         valid_aurocs: List[float] = []
         total_test_images = 0
+        
+        # Fairness tracking
+        if enable_fairness:
+            from fairness_utils import SubgroupDetector, FairnessEvaluator, save_fairness_report, log_fairness_summary
 
         for cat in self.categories:
             if cat not in global_banks:
@@ -224,7 +158,17 @@ class SequentialPatchCoreClient:
                 continue
 
             self.trainer.load_memory_bank(global_banks[cat].cpu())
-            metrics_dict, n_test = self.trainer.evaluate(cat)
+            
+            if enable_fairness:
+                metrics_dict, n_test, fairness_report = self.trainer.evaluate_with_fairness(cat)
+                
+                # Save fairness report
+                fairness_path = self.output_dir / f"client_{self.client_id}_{cat}_fairness.json"
+                save_fairness_report(fairness_report, fairness_path)
+                log_fairness_summary(fairness_report)
+            else:
+                metrics_dict, n_test = self.trainer.evaluate(cat)
+            
             total_test_images += n_test
 
             for k, v in metrics_dict.items():
@@ -249,6 +193,8 @@ class SequentialPatchCoreClient:
 
         return all_metrics
 
+
+# În client_sequential.py, funcția parse_args():
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Sequential Federated PatchCore Client")
@@ -276,11 +222,23 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--log-level", type=str, default="INFO")
     p.add_argument("--train-partition-id", type=int, default=0)
     p.add_argument("--train-num-partitions", type=int, default=1)
+    
+    # DP arguments
     p.add_argument("--dp", action="store_true", help="Enable client-side DP before upload")
     p.add_argument("--dp-epsilon", type=float, default=1.0)
     p.add_argument("--dp-delta", type=float, default=1e-5)
     p.add_argument("--dp-clip-norm", type=float, default=1.0)
     p.add_argument("--dp-seed", type=int, default=None)
+    
+    # NEW: Fairness argument
+    p.add_argument(
+        "--fairness-coreset-mode",
+        type=str,
+        default="none",
+        choices=["none", "proportional", "equal"],
+        help="Fairness-aware coreset sampling mode",
+    )
+    
     return p.parse_args()
 
 
@@ -318,6 +276,7 @@ def main() -> None:
         dp_delta=args.dp_delta,
         dp_clip_norm=args.dp_clip_norm,
         dp_seed=args.dp_seed,
+        fairness_mode=args.fairness_coreset_mode,  # NEW
     )
 
     if args.mode == "upload":
@@ -332,3 +291,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
