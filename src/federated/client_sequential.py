@@ -51,6 +51,28 @@ def rpc(server_host: str, server_port: int, payload: dict, timeout_s: float = 12
         return recv_msg(sock)
 
 
+def _rdp_epsilon(
+    noise_multiplier: float,
+    steps: int,
+    delta: float,
+    orders: List[float],
+) -> Tuple[float, float]:
+    if noise_multiplier <= 0:
+        raise ValueError("noise_multiplier must be > 0 for RDP accounting.")
+    if steps <= 0:
+        return 0.0, orders[0]
+    if delta <= 0 or delta >= 1:
+        raise ValueError("delta must be in (0, 1) for RDP accounting.")
+
+    rdp = [(steps * order) / (2.0 * noise_multiplier ** 2) for order in orders]
+    epsilons = [
+        r + (np.log(1.0 / delta) / (order - 1.0))
+        for r, order in zip(rdp, orders)
+    ]
+    min_idx = int(np.argmin(epsilons))
+    return float(epsilons[min_idx]), float(orders[min_idx])
+
+
 class SequentialPatchCoreClient:
     def __init__(
         self,
@@ -122,18 +144,34 @@ class SequentialPatchCoreClient:
             noise = rng.normal(0.0, noise_std, size=clipped.shape).astype(clipped.dtype, copy=False)
             dp_banks[cat] = clipped + noise
 
-        total_eps = self.dp_epsilon * max(1, len(banks_np))
-        total_delta = self.dp_delta * max(1, len(banks_np))
+        steps = max(1, len(banks_np))
+        orders = [1.25, 1.5, 2, 3, 4, 5, 8, 10, 16, 32, 64, 128]
+        rdp_eps, rdp_order = _rdp_epsilon(sigma, steps, self.dp_delta, orders)
         logging.info(
-            "[Client %d] DP enabled: eps=%.4f delta=%.2e clip=%.3f sigma=%.4f total_eps=%.4f total_delta=%.2e",
+            "[Client %d] DP enabled: per_release_eps=%.4f delta=%.2e clip=%.3f sigma=%.4f rdp_eps=%.4f (order=%.2f, steps=%d)",
             self.client_id,
             self.dp_epsilon,
             self.dp_delta,
             self.dp_clip_norm,
             sigma,
-            total_eps,
-            total_delta,
+            rdp_eps,
+            rdp_order,
+            steps,
         )
+        budget_path = self.output_dir / f"client_{self.client_id}_dp_budget.json"
+        budget_payload = {
+            "client_id": self.client_id,
+            "per_release_eps": float(self.dp_epsilon),
+            "delta": float(self.dp_delta),
+            "clip_norm": float(self.dp_clip_norm),
+            "sigma": float(sigma),
+            "steps": int(steps),
+            "rdp_eps": float(rdp_eps),
+            "rdp_order": float(rdp_order),
+        }
+        with open(budget_path, "w", encoding="utf-8") as f:
+            json.dump(budget_payload, f, indent=2)
+        logging.info("[Client %d] Wrote DP budget to %s", self.client_id, budget_path)
         return dp_banks
 
     def upload(self, server_host: str, server_port: int) -> None:
