@@ -1,0 +1,10 @@
+{
+  "client_id": 2,
+  "per_release_eps": 1.0,
+  "delta": 1e-05,
+  "clip_norm": 1.0,
+  "sigma": 4.844805262605389,
+  "steps": 2,
+  "rdp_eps": 1.4491876140255657,
+  "rdp_order": 16.0
+}
