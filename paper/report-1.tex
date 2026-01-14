@@ -21,7 +21,7 @@
 % to avoid loading the natbib package, add option nonatbib:
 %    \usepackage[nonatbib]{neurips_2024}
 
-
+\usepackage{amsmath}
 \usepackage[utf8]{inputenc} % allow utf-8 input
 \usepackage[T1]{fontenc}    % use 8-bit T1 fonts
 \usepackage{hyperref}       % hyperlinks
@@ -476,6 +476,76 @@ First introduced by \citep{Dwork2006Calibrating} we implement differential priva
   \item \textbf{Accounting:} track the per-round and total privacy loss $(\varepsilon, \delta)$ with a standard accountant (e.g., RDP or moments accountant) and log the cumulative budget for the run.
 \end{itemize}
 In short: we constrain and perturb each client's memory bank so the transmission itself is differentially private, and report the total privacy cost for the training session.
+
+\subsection{Fairness-Aware Coreset Selection}
+
+To address potential bias in federated learning scenarios where clients possess imbalanced data distributions, we introduce \textbf{fairness-aware coreset selection}. Traditional k-Center greedy algorithms applied globally can under-represent minority subgroups (e.g., rare defect types or products with fewer training samples), leading to degraded performance on these critical categories.
+
+
+\subsubsection{Fairness-Aware Coreset Selection Algorithm}
+
+The fairness-aware coreset selection algorithm operates in several key stages to ensure equitable representation of all data subgroups:
+
+\paragraph{Input Requirements} \\
+
+The algorithm requires four inputs:
+\begin{itemize}
+    \item A complete set of extracted features $\mathcal{X}$
+    \item Metadata defining subgroup membership for each feature
+    \item A target coreset size $M$
+    \item A fairness mode selection: none, proportional, or equal
+\end{itemize}
+
+\paragraph{Algorithm Steps} \\
+
+\textbf{Step 1: Subgroup Detection}
+
+Based on metadata, the full feature set $\mathcal{X}$ is partitioned into $K$ subgroups $\{\mathcal{X}_k\}_{k=1}^K$, where $|\mathcal{X}_k| = N_k$ and $\sum_{k=1}^K N_k = N$.
+
+\textbf{Step 2: Allocation Strategy Selection}
+
+For each subgroup $\mathcal{X}_k$, an allocated coreset size $M_k$ is computed depending on the selected fairness mode:
+
+\begin{itemize}
+    \item \textbf{None mode:}
+    \[
+    M_1 = M, \quad K = 1
+    \]
+    
+    \item \textbf{Proportional mode:}
+    \[
+    M_k = \left\lfloor M \cdot \frac{N_k}{N} \right\rfloor
+    \]
+    
+    \item \textbf{Equal mode:}
+    \[
+    M_k = \left\lfloor \frac{M}{K} \right\rfloor
+    \]
+\end{itemize}
+
+\textbf{Step 3: Per-Subgroup Coreset Selection}
+
+For each subgroup, a k-Center greedy algorithm is applied independently to select a coreset. The k-Center algorithm iteratively selects features that maximize coverage of the feature space, ensuring diverse representation of normal patterns within each subgroup. The k-Center objective is defined as:
+\[
+\mathcal{C}_k = \arg\min_{|\mathcal{C}_k| = M_k} \; \max_{x \in \mathcal{X}_k} \; \min_{c \in \mathcal{C}_k} \| x - c \|_2
+\]
+
+\textbf{Step 4: Combination}
+
+Finally, the algorithm combines all per-subgroup coresets into a single unified coreset that respects the fairness constraints while maintaining the target total size. The final fairness-aware coreset is obtained by concatenation:
+\[
+\mathcal{C} = \bigcup_{k=1}^K \mathcal{C}_k, \quad |\mathcal{C}| = \sum_{k=1}^K M_k \approx M
+\]
+
+\paragraph{Output}
+
+The algorithm outputs the coreset $\mathcal{C}$ together with allocation metadata $\{M_k\}_{k=1}^K$, enabling fairness auditing.
+
+\paragraph{Discussion}
+
+This fairness-aware coreset selection strategy ensures that all detected subgroups contribute meaningfully to the final memory bank, even in the presence of highly imbalanced data distributions. By decoupling coreset construction across subgroups and enforcing explicit allocation policies, the method mitigates the risk of minority patterns being overshadowed by dominant classes. \\
+
+Moreover, the approach is flexible and easily configurable, allowing practitioners to trade off between preserving the natural data distribution and enforcing stronger fairness constraints, depending on application requirements. Importantly, the proposed method introduces minimal computational overhead compared to standard k-Center selection, while significantly improving robustness and fairness across heterogeneous federated clients.
 
 \section{Conclusions and Future Steps}
 

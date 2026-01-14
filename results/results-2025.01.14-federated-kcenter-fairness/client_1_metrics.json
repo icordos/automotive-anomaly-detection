@@ -1,0 +1,12 @@
+{
+  "engine_wiring_image_roc_auc": 0.6067941593113217,
+  "engine_wiring_pixel_roc_auc": 0.8567613207244579,
+  "engine_wiring_image_ap": 0.6478121431573802,
+  "engine_wiring_pixel_ap": 0.013986144532561522,
+  "pipe_clip_image_roc_auc": 0.5533766702780787,
+  "pipe_clip_pixel_roc_auc": 0.8141869083296848,
+  "pipe_clip_image_ap": 0.4575722254805942,
+  "pipe_clip_pixel_ap": 0.016301587278299782,
+  "avg_auroc": 0.5800854147947002,
+  "total_test_images": 944.0
+}
