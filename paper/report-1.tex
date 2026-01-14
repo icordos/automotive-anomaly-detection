@@ -38,6 +38,8 @@
 \usepackage{subfig}
 \usepackage{natbib} % For better citation handling
 \usepackage{float}
+%\usepackage{tocloft}
+\usepackage{hyperref} % Makes ToC entries clickable
 
 % IBM Plex fonts
 \usepackage{plex-serif}   % For main text
@@ -79,7 +81,8 @@
 In this work we are exploring ways to detect defective parts in automotive production lines. Using the AutoVI dataset, we implement a PatchCore based detection loop and we attempt to apply trustworthy AI techniques to improve it.
 
 \end{abstract}
-
+\tableofcontents
+\newpage % Start content on a new page (optional)
 
 \section{Introduction}
 
@@ -476,6 +479,118 @@ First introduced by \citep{Dwork2006Calibrating} we implement differential priva
   \item \textbf{Accounting:} track the per-round and total privacy loss $(\varepsilon, \delta)$ with a standard accountant (e.g., RDP or moments accountant) and log the cumulative budget for the run.
 \end{itemize}
 In short: we constrain and perturb each client's memory bank so the transmission itself is differentially private, and report the total privacy cost for the training session.
+
+Introducing differental privacy decreases our scores almost to the level of centralized training.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{comparison003.png}
+    \caption{Comprehensive performance comparison showing: (top-left) image-level AUROC, (top-right) pixel-level AUROC, (bottom-left) performance degradation heatmap, (bottom-right) average metrics across all categories.}
+    \label{fig:comparison003}
+\end{figure}
+\FloatBarrier
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{detailed-comparison003.png}
+    \caption{Detailed per-category comparison of all four evaluation metrics (Image AUROC, Pixel AUROC, Image AP, Pixel AP) between centralized and federated approaches.}
+    \label{fig:detailed_comparison003}
+\end{figure}
+\FloatBarrier
+
+\subsection{Renyi Differential Privacy}
+Introduced by \citep{Mironov_2017} Rényi Differential Privacy (RDP) is a generalization of differential privacy that provides a more mathematically tractable way to analyze the composition of private mechanisms, particularly for iterative algorithms.
+ \\
+A randomized mechanism $\mathcal{M}$ satisfies $(\alpha, \epsilon)$-RDP if for any two adjacent datasets $D, D'$ (differing in a single element), the Rényi divergence of order $\alpha$ between their output distributions is bounded by 
+      $\epsilon$:
+   \begin{equation}
+   D_\alpha(\mathcal{M}(D) || \mathcal{M}(D')) \le \epsilon
+   \end{equation}
+where the Rényi divergence of order $\alpha > 1$ between distributions $P$ and $Q$ is defined as:
+ \begin{equation}
+     D_\alpha(P || Q) = \frac{1}{\alpha - 1} \ln \mathbb{E}_{x \sim Q} \left[ \left( \frac{P(x)}{Q(x)} \right)^\alpha \right]
+ \end{equation}
+ \\
+ RDP is a stronger definition than $(\epsilon, \delta)$-DP. If a mechanism satisfies $(\alpha, \epsilon)$-RDP, then it also satisfies $\left(\epsilon + \frac{\ln(1/\delta)}{\alpha-1}, \delta\right)$-DP for any $\delta \in (0, 1)$. This conversion allows researchers to track privacy loss in the RDP domain and translate the final bound back to the standard DP language.
+ \paragraph*{Key Properties}
+\begin{itemize}
+	\item \textbf{Composition:} If $\mathcal{M}_1$ satisfies $(\alpha, \epsilon_1)$-RDP and $\mathcal{M}_2$ satisfies $(\alpha, \epsilon_2)$-RDP, then their composition satisfies $(\alpha, \epsilon_1 + \epsilon_2)$-RDP. This linear composition is significantly tighter than the "Advanced Composition" theorem used in standard DP.
+	\item \textbf{Gaussian Mechanism:} For a function $f$ with $L_2$-sensitivity $\Delta f$, the Gaussian mechanism $\mathcal{M}(D) = f(D) + \mathcal{N}(0, \sigma^2 I)$ satisfies $(\alpha, \alpha \Delta f^2 / 2\sigma^2)$-RDP.
+ \end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{comparison004.png}
+    \caption{Comprehensive performance comparison showing: (top-left) image-level AUROC, (top-right) pixel-level AUROC, (bottom-left) performance degradation heatmap, (bottom-right) average metrics across all categories.}
+    \label{fig:comparison004}
+\end{figure}
+\FloatBarrier
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{detailed-comparison004.png}
+    \caption{Detailed per-category comparison of all four evaluation metrics (Image AUROC, Pixel AUROC, Image AP, Pixel AP) between centralized and federated approaches.}
+    \label{fig:detailed_comparison004}
+\end{figure}
+\FloatBarrier
+
+The results indicate a scenario with strong privacy guarantees but significantly degraded utility (anomaly detection performance).  
+The use of Differential Privacy (DP) with a high noise level has severely impacted the model's ability to distinguish between normal and anomalous images in most categories.
+
+Privacy analysis 
+\begin{itemize}
+    \item Privacy Budget ($\varepsilon$): $\approx 1.45$ (at $\delta = 10^{-5}$).\\
+    \hspace*{1.5em}This is a tight/strong privacy budget. Values below 2.0 are generally considered excellent for sensitive data. 
+    \item Noise Multiplier ($\sigma$): $\approx 4.84$.\\
+    \hspace*{1.5em}This is a very high amount of noise. For context, typical training runs might use $\sigma \approx 1.0$ to $1.5$. A value of nearly 5 means the noise added to the gradients/updates is roughly 5 times the magnitude of the clipped signal itself.
+    \item Rényi Order ($\alpha$): $16.0$.\\
+    \hspace*{1.5em}The accountant found that $\alpha = 16$ provided the tightest bound for this specific noise and step count.
+\end{itemize}
+
+Utility analysis:
+\begin{itemize}
+    \item Good performance:
+    \begin{itemize}
+        \item Underbody Pipes (Client 3): ROC AUC $\approx 0.79$.  
+        This category remained relatively robust to the noise, maintaining decent detection capability.
+    \end{itemize}
+    
+    \item Poor performance (near random):
+    \begin{itemize}
+        \item Engine Wiring (Client 1): ROC AUC $\approx 0.56$.
+        \item Pipe Clip (Client 1): ROC AUC $\approx 0.56$.
+        \item Pipe Staple (Client 2): ROC AUC $\approx 0.59$.
+    \end{itemize}
+    
+    \item Failure cases (worse than random):
+    \begin{itemize}
+        \item Tank Screw (Client 2): ROC AUC $\approx 0.42$.  
+        The noise likely overwhelmed the subtle features of this category, flipping the decision boundary (a score $<0.5$ suggests the model is effectively inverted or confused).
+        \item Underbody Screw (Client 3): ROC AUC $\approx 0.51$.
+    \end{itemize}
+\end{itemize}
+
+Conclusion:  
+The experiment prioritized privacy over utility. The high noise ($\sigma \approx 4.84$) ensured the epsilon remained low ($\approx 1.45$) despite the composition of mechanisms, but it rendered the model ineffective for finer‑grained anomalies (screws, wiring).
+
+
+\section{Fairness}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{comparison005.png}
+    \caption{Comprehensive performance comparison showing: (top-left) image-level AUROC, (top-right) pixel-level AUROC, (bottom-left) performance degradation heatmap, (bottom-right) average metrics across all categories.}
+    \label{fig:comparison005}
+\end{figure}
+\FloatBarrier
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{detailed-comparison005.png}
+    \caption{Detailed per-category comparison of all four evaluation metrics (Image AUROC, Pixel AUROC, Image AP, Pixel AP) between centralized and federated approaches.}
+    \label{fig:detailed_comparison005}
+\end{figure}
+\FloatBarrier
 
 \section{Conclusions and Future Steps}
 
