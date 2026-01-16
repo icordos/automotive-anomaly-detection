@@ -76,3 +76,56 @@ After all clients have finished, run the eval mode for all clients:
   --coreset-chunk-size 16384 --distance-chunk-size 8192 /
   --train-partition-id 0 --train-num-partitions 2 /
   --device cuda --log-level INFO
+
+
+## Adding Fairness-Aware Coreset Selection
+
+This implementation adds fairness-aware coreset selection to Federated PatchCore to prevent bias towards categories/subgroups with more training data.
+
+### Without Fairness:
+```
+Category A: 1000 images → 90% of coreset
+Category B: 100 images  → 10% of coreset
+
+Results:
+  - Category A: AUROC = 0.95 ✓
+  - Category B: AUROC = 0.67 ✗ (under-represented!)
+```
+
+## Available Modes
+
+### 1. `none` - No Fairness (Baseline)
+```bash
+--fairness-coreset-mode none
+```
+- Applies k-Center on **all patches together**
+- **Risk:** Minority groups are under-represented
+- **Use case:** Baseline for comparison
+
+---
+
+### 2. `proportional` - Proportional Fairness
+```bash
+--fairness-coreset-mode proportional
+```
+- **Allocates patches proportionally** to subgroup size
+- **Example:** 
+  - Subgroup with 80% of patches → gets ~80% of coreset
+  - Subgroup with 20% of patches → gets ~20% of coreset
+- **Advantage:** Maintains natural distribution while ensuring minority representation
+- **Use case:** Balanced accuracy and fairness
+
+---
+
+### 3. `equal` - Equal Fairness
+```bash
+--fairness-coreset-mode equal
+```
+- **Allocates equal number of patches** to each subgroup
+- **Example:**
+  - 2 subgroups, 5000 total patches → 2500 per subgroup
+- **Advantage:** Maximum representation for minority groups
+- **Disadvantage:** May under-represent majority groups
+- **Use case:** When minority group performance is critical
+
+---

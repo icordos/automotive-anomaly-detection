@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Run the sequential federated PatchCore pipeline (1 round, server k-center aggregation).
 
 This script:
@@ -6,20 +5,17 @@ This script:
 2) runs clients sequentially in upload mode (client1 -> client2 -> client3)
 3) runs clients sequentially in eval mode (client1 -> client2 -> client3)
 4) shuts down the server
-
-IMPROVED:
-- Writes logs/artifacts under federated_sequential/{logs|artifacts}/federated_sequential/federated_improved/...
-- Splits at least one category across 2 clients via partition args (requires client/dataset support)
 """
 from __future__ import annotations
 
 import argparse
 import logging
+import os
 import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import List
+from typing import List, Dict
 
 
 def _python_exe() -> str:
@@ -72,7 +68,7 @@ def _rpc_shutdown(server_host: str, server_port: int) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Run sequential federated PatchCore pipeline (improved)")
+    p = argparse.ArgumentParser(description="Run sequential federated PatchCore pipeline")
     p.add_argument("--server-host", type=str, default="127.0.0.1")
     p.add_argument("--server-bind-host", type=str, default="0.0.0.0")
     p.add_argument("--server-port", type=int, default=8081)
@@ -96,11 +92,6 @@ def parse_args() -> argparse.Namespace:
 
     p.add_argument("--device", type=str, default="cuda")
     p.add_argument("--log-level", type=str, default="INFO")
-    p.add_argument("--dp", action="store_true", help="Enable client-side DP before upload")
-    p.add_argument("--dp-epsilon", type=float, default=1.0)
-    p.add_argument("--dp-delta", type=float, default=1e-5)
-    p.add_argument("--dp-clip-norm", type=float, default=1.0)
-    p.add_argument("--dp-seed", type=int, default=None)
     return p.parse_args()
 
 
@@ -108,8 +99,8 @@ def main() -> None:
     args = parse_args()
     logging.basicConfig(level=getattr(logging, args.log_level.upper()), format="%(asctime)s [%(levelname)s] %(message)s")
 
-    artifacts_dir = args.artifacts_dir / "federated_improved"
-    logs_dir = args.logs_dir / "federated_improved"
+    artifacts_dir = args.artifacts_dir
+    logs_dir = args.logs_dir
     artifacts_dir.mkdir(parents=True, exist_ok=True)
     logs_dir.mkdir(parents=True, exist_ok=True)
 
@@ -135,15 +126,10 @@ def main() -> None:
 
     time.sleep(2)
 
-    # Split a category between 2 clients:
-    # - engine_wiring split into 2 partitions: client1 gets partition 0/2, client2 gets partition 1/2
-    # NOTE: This REQUIRES client_sequential.py + dataset loader to support these args:
-    #   --train-partition-id, --train-num-partitions
-    # (You asked earlier for splitting by hash/index; hook it there.)
     clients = [
-        {"client_id": 1, "categories": ["engine_wiring", "pipe_clip"], "partition_id": 0, "num_partitions": 2},
-        {"client_id": 2, "categories": ["engine_wiring", "tank_screw"], "partition_id": 1, "num_partitions": 2},
-        {"client_id": 3, "categories": ["underbody_pipes", "underbody_screw"], "partition_id": None, "num_partitions": None},
+        {"client_id": 1, "categories": ["engine_wiring", "pipe_clip"]},
+        {"client_id": 2, "categories": ["pipe_staple", "tank_screw"]},
+        {"client_id": 3, "categories": ["underbody_pipes", "underbody_screw"]},
     ]
 
     common_client_args = [
@@ -162,17 +148,6 @@ def main() -> None:
         "--device", args.device,
         "--log-level", args.log_level,
     ]
-    if args.dp:
-        common_client_args.extend(
-            [
-                "--dp",
-                "--dp-epsilon", str(args.dp_epsilon),
-                "--dp-delta", str(args.dp_delta),
-                "--dp-clip-norm", str(args.dp_clip_norm),
-            ]
-        )
-        if args.dp_seed is not None:
-            common_client_args.extend(["--dp-seed", str(args.dp_seed)])
 
     # Upload phase (sequential)
     for c in clients:
@@ -188,11 +163,6 @@ def main() -> None:
             "--categories", *c["categories"],
             *common_client_args,
         ]
-        if c["partition_id"] is not None and c["num_partitions"] is not None:
-            cmd += [
-                "--train-partition-id", str(c["partition_id"]),
-                "--train-num-partitions", str(c["num_partitions"]),
-            ]
         logging.info("Starting %s", name)
         logging.info("CMD: %s", " ".join(cmd))
         p = _popen(cmd, outp, errp)
@@ -216,11 +186,6 @@ def main() -> None:
             "--categories", *c["categories"],
             *common_client_args,
         ]
-        if c["partition_id"] is not None and c["num_partitions"] is not None:
-            cmd += [
-                "--train-partition-id", str(c["partition_id"]),
-                "--train-num-partitions", str(c["num_partitions"]),
-            ]
         logging.info("Starting %s", name)
         logging.info("CMD: %s", " ".join(cmd))
         p = _popen(cmd, outp, errp)
