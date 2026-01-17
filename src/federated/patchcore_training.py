@@ -56,6 +56,11 @@ class PatchCoreTrainingConfig:
     distance_chunk_size: int = 8192
     train_partition_id: int = 0
     train_num_partitions: int = 1
+    save_interpretability: bool = False
+    saliency_max_images: int = 10
+    shap_max_images: int = 0
+    shap_background: int = 20
+    shap_max_patches: int = 64
 
     def __post_init__(self) -> None:
         if self.image_size <= 0:
@@ -90,6 +95,14 @@ class PatchCoreTrainingConfig:
             raise ValueError(
                 f"train_partition_id must be in [0, train_num_partitions-1], got {self.train_partition_id} for {self.train_num_partitions}"
             )
+        if self.saliency_max_images < 0:
+            raise ValueError(f"saliency_max_images must be >= 0, got {self.saliency_max_images}")
+        if self.shap_max_images < 0:
+            raise ValueError(f"shap_max_images must be >= 0, got {self.shap_max_images}")
+        if self.shap_background <= 0:
+            raise ValueError(f"shap_background must be > 0, got {self.shap_background}")
+        if self.shap_max_patches <= 0:
+            raise ValueError(f"shap_max_patches must be > 0, got {self.shap_max_patches}")
 
     def resolved_device(self) -> str:
         if self.device:
@@ -107,6 +120,7 @@ class AutoVIAnomalyDataset(Dataset):
         mask_transform: transforms.Compose,
         train_partition_id: int = 0,
         train_num_partitions: int = 1,
+        return_path: bool = False,
     ) -> None:
         if split not in {"train", "test"}:
             raise ValueError(f"Unsupported split '{split}'")
@@ -115,6 +129,7 @@ class AutoVIAnomalyDataset(Dataset):
         self.mask_transform = mask_transform
         self.train_partition_id = train_partition_id
         self.train_num_partitions = train_num_partitions
+        self.return_path = return_path
         category_dir = dataset_root / category / category
         if not category_dir.exists():
             raise FileNotFoundError(f"Missing category directory: {category_dir}")
@@ -161,7 +176,7 @@ class AutoVIAnomalyDataset(Dataset):
     def __len__(self) -> int:
         return len(self.items)
 
-    def __getitem__(self, index: int) -> Tuple[Tensor, Tensor, Tensor]:
+    def __getitem__(self, index: int) -> Tuple[Tensor, Tensor, Tensor] | Tuple[Tensor, Tensor, Tensor, str]:
         image_path, mask_paths, label = self.items[index]
 
         try:
@@ -194,6 +209,8 @@ class AutoVIAnomalyDataset(Dataset):
                 mask_tensor = torch.zeros(
                     (1, image_tensor.shape[-2], image_tensor.shape[-1]), dtype=torch.float32
                 )
+        if self.return_path:
+            return image_tensor, label_tensor, mask_tensor, str(image_path)
         return image_tensor, label_tensor, mask_tensor
 
 
@@ -270,6 +287,7 @@ class PatchCoreTrainer:
             mask_transform=self.mask_transform,
             train_partition_id=self.config.train_partition_id,
             train_num_partitions=self.config.train_num_partitions,
+            return_path=split == "test" and self.config.save_interpretability,
         )
         return DataLoader(
             dataset,
@@ -545,6 +563,174 @@ class PatchCoreTrainer:
         torch.save(checkpoint, path)
         return path
 
+    def _unnormalize_image(self, image_tensor: Tensor) -> np.ndarray:
+        image = image_tensor.detach().cpu().float()
+        mean = torch.tensor(IMAGENET_MEAN).view(3, 1, 1)
+        std = torch.tensor(IMAGENET_STD).view(3, 1, 1)
+        image = image * std + mean
+        image = torch.clamp(image, 0.0, 1.0)
+        image = (image.permute(1, 2, 0).numpy() * 255).astype(np.uint8)
+        return image
+
+    def _save_heatmap_overlay(self, image_tensor: Tensor, heatmap: np.ndarray, out_path: Path) -> None:
+        img = self._unnormalize_image(image_tensor)
+        if heatmap.ndim == 3:
+            heatmap = heatmap.squeeze()
+        heatmap = np.clip(heatmap, 0.0, 1.0)
+        heat = (heatmap * 255).astype(np.uint8)
+        overlay = np.zeros_like(img)
+        overlay[..., 0] = heat
+        alpha = 0.45
+        blended = (img * (1 - alpha) + overlay * alpha).astype(np.uint8)
+        Image.fromarray(blended).save(out_path)
+
+    def _compute_gradcam(self, image_tensor: Tensor) -> np.ndarray:
+        self.model.feature_extractor.zero_grad(set_to_none=True)
+        image_tensor = image_tensor.unsqueeze(0).to(self.model.device)
+        with torch.set_grad_enabled(True):
+            feats = self.model.feature_extractor(image_tensor)
+            feats = {k: v.float() for k, v in feats.items()}
+            target_layer = self.config.feature_layers[-1]
+            feats[target_layer].retain_grad()
+            embeddings, patch_shape = self.model.aggregate(feats)
+            image_scores, _ = self._compute_scores(embeddings, patch_shape)
+            image_scores[0].backward()
+            grads = feats[target_layer].grad
+            weights = grads.mean(dim=(2, 3), keepdim=True)
+            cam = (weights * feats[target_layer]).sum(dim=1, keepdim=True)
+            cam = F.relu(cam)
+            cam = F.interpolate(
+                cam,
+                size=(self.config.image_size, self.config.image_size),
+                mode="bilinear",
+                align_corners=False,
+            )
+            cam = cam.squeeze().detach().cpu().numpy()
+        if cam.max() > cam.min():
+            cam = (cam - cam.min()) / (cam.max() - cam.min() + 1e-12)
+        return cam
+
+    def _save_interpretability_outputs(
+        self,
+        category: str,
+        image_tensor: Tensor,
+        image_path: str,
+        anomaly_map: Tensor,
+        patch_shape: Tuple[int, int],
+    ) -> None:
+        category_dir = self.output_dir / "interpretability" / category
+        category_dir.mkdir(parents=True, exist_ok=True)
+        stem = Path(image_path).stem
+
+        anomaly_np = anomaly_map.squeeze(0).detach().cpu().numpy()
+        anomaly_np = (anomaly_np - anomaly_np.min()) / (anomaly_np.max() - anomaly_np.min() + 1e-12)
+        anomaly_out = category_dir / f"{stem}_anomaly.png"
+        self._save_heatmap_overlay(image_tensor, anomaly_np, anomaly_out)
+
+        gradcam = self._compute_gradcam(image_tensor)
+        gradcam_out = category_dir / f"{stem}_gradcam.png"
+        self._save_heatmap_overlay(image_tensor, gradcam, gradcam_out)
+
+        meta_out = category_dir / f"{stem}_interpretability.json"
+        with open(meta_out, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "image": image_path,
+                    "patch_shape": list(patch_shape),
+                    "anomaly_map": anomaly_out.name,
+                    "gradcam": gradcam_out.name,
+                },
+                f,
+                indent=2,
+            )
+
+    def _run_shap_explainer(
+        self,
+        category: str,
+        samples: List[Dict[str, object]],
+    ) -> None:
+        if not samples:
+            return
+        try:
+            import shap
+        except Exception as exc:
+            logging.warning("SHAP not available (%s); skipping SHAP outputs.", exc)
+            return
+
+        memory_bank = self.memory_bank
+        if memory_bank is None:
+            logging.warning("Memory bank missing; skipping SHAP outputs.")
+            return
+
+        category_dir = self.output_dir / "interpretability" / category / "shap"
+        category_dir.mkdir(parents=True, exist_ok=True)
+
+        k = min(self.config.shap_max_patches, samples[0]["patch_scores"].numel())
+        patch_scores = samples[0]["patch_scores"].flatten()
+        topk = torch.topk(patch_scores, k=k).indices.cpu().numpy()
+        feat_dim = samples[0]["embeddings"].shape[-1]
+
+        def _flatten_sample(emb: Tensor) -> np.ndarray:
+            selected = emb.reshape(-1, feat_dim)[topk]
+            return selected.detach().cpu().numpy().reshape(1, -1)
+
+        data = np.concatenate([_flatten_sample(s["embeddings"]) for s in samples], axis=0)
+        background = data[: min(self.config.shap_background, data.shape[0])]
+        memory_bank_cpu = memory_bank.detach().cpu()
+
+        def model_fn(x: np.ndarray) -> np.ndarray:
+            x_t = torch.from_numpy(x.astype(np.float32))
+            n = x_t.shape[0]
+            emb = x_t.view(n, k, feat_dim)
+            flat = emb.reshape(-1, feat_dim)
+            distances = torch.cdist(flat, memory_bank_cpu)
+            min_distances, _ = torch.min(distances, dim=1)
+            patch_scores = min_distances.view(n, k)
+            k_top = max(1, int(0.01 * k))
+            topk_vals = torch.topk(patch_scores, k=k_top, dim=1).values
+            scores = topk_vals.mean(dim=1)
+            return scores.detach().cpu().numpy()
+
+        explainer = shap.KernelExplainer(model_fn, background)
+        shap_values = explainer.shap_values(data, nsamples=100)
+        shap_arr = np.array(shap_values)
+        if shap_arr.ndim == 3:
+            shap_arr = shap_arr[0]
+
+        patch_h, patch_w = samples[0]["patch_shape"]
+        for idx, sample in enumerate(samples):
+            sv = shap_arr[idx].reshape(k, feat_dim)
+            patch_importance = np.mean(np.abs(sv), axis=1)
+            patch_map = np.zeros((patch_h * patch_w,), dtype=np.float32)
+            patch_map[topk] = patch_importance
+            patch_map = patch_map.reshape(patch_h, patch_w)
+            patch_map = (patch_map - patch_map.min()) / (patch_map.max() - patch_map.min() + 1e-12)
+            heatmap = (
+                F.interpolate(
+                    torch.from_numpy(patch_map).unsqueeze(0).unsqueeze(0),
+                    size=(self.config.image_size, self.config.image_size),
+                    mode="bilinear",
+                    align_corners=False,
+                )
+                .squeeze()
+                .numpy()
+            )
+            stem = Path(sample["image_path"]).stem
+            out_path = category_dir / f"{stem}_shap.png"
+            self._save_heatmap_overlay(sample["image_tensor"], heatmap, out_path)
+            meta_path = category_dir / f"{stem}_shap.json"
+            with open(meta_path, "w", encoding="utf-8") as f:
+                json.dump(
+                    {
+                        "image": sample["image_path"],
+                        "topk_patches": topk.tolist(),
+                        "patch_importance": patch_importance.tolist(),
+                        "shap_image": out_path.name,
+                    },
+                    f,
+                    indent=2,
+                )
+
     def evaluate(self, category: str) -> Tuple[Dict[str, float], int]:
         if self.memory_bank is None:
             raise RuntimeError("Call fit() or load_memory_bank() before evaluate().")
@@ -558,7 +744,14 @@ class PatchCoreTrainer:
         pixel_scores: List[float] = []
         pixel_labels: List[int] = []
 
-        for i, (images, labels, masks) in enumerate(tqdm(loader, desc=f"Evaluating {category}")):
+        saliency_saved = 0
+        shap_samples: List[Dict[str, object]] = []
+
+        for i, batch in enumerate(tqdm(loader, desc=f"Evaluating {category}")):
+            if self.config.save_interpretability:
+                images, labels, masks, paths = batch
+            else:
+                images, labels, masks = batch
             images = images.to(self.model.device)
             feats = self.model.extract(images)
             embeddings, patch_shape = self.model.aggregate(feats)
@@ -574,6 +767,32 @@ class PatchCoreTrainer:
             for upsampled, mask in zip(upsampled_maps, masks):
                 pixel_scores.extend(upsampled.flatten().cpu().tolist())
                 pixel_labels.extend(mask.flatten().long().cpu().tolist())
+
+            if self.config.save_interpretability and saliency_saved < self.config.saliency_max_images:
+                for idx in range(images.shape[0]):
+                    if saliency_saved >= self.config.saliency_max_images:
+                        break
+                    self._save_interpretability_outputs(
+                        category=category,
+                        image_tensor=images[idx].detach().cpu(),
+                        image_path=paths[idx],
+                        anomaly_map=upsampled_maps[idx].detach().cpu(),
+                        patch_shape=patch_shape,
+                    )
+                    saliency_saved += 1
+
+            if self.config.save_interpretability and len(shap_samples) < self.config.shap_max_images:
+                remaining = self.config.shap_max_images - len(shap_samples)
+                for idx in range(min(remaining, images.shape[0])):
+                    shap_samples.append(
+                        {
+                            "embeddings": embeddings[idx].detach().cpu(),
+                            "patch_scores": anomaly_maps[idx].detach().cpu(),
+                            "patch_shape": patch_shape,
+                            "image_path": paths[idx],
+                            "image_tensor": images[idx].detach().cpu(),
+                        }
+                    )
 
             del feats, embeddings, anomaly_scores, anomaly_maps, upsampled_maps, images
             if i % 10 == 0:
@@ -601,6 +820,9 @@ class PatchCoreTrainer:
         import gc
         gc.collect()
         logging.info("Memory cleaned after %s evaluation", category)
+
+        if self.config.save_interpretability and self.config.shap_max_images > 0:
+            self._run_shap_explainer(category, shap_samples)
 
         return metrics_dict, self._count_test_images(category)
 
@@ -685,6 +907,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", type=str, default=None)
     parser.add_argument("--skip-eval", action="store_true")
     parser.add_argument("--log-level", type=str, default="INFO")
+    parser.add_argument("--interpretability", action="store_true")
+    parser.add_argument("--saliency-max-images", type=int, default=10)
+    parser.add_argument("--shap-max-images", type=int, default=0)
+    parser.add_argument("--shap-background", type=int, default=20)
+    parser.add_argument("--shap-max-patches", type=int, default=64)
     
     # NEW: Fairness arguments
     parser.add_argument(
@@ -734,6 +961,11 @@ def main() -> None:
         distance_chunk_size=args.distance_chunk_size,
         use_mixed_precision=not args.no_mixed_precision,
         device=args.device,
+        save_interpretability=args.interpretability,
+        saliency_max_images=args.saliency_max_images,
+        shap_max_images=args.shap_max_images,
+        shap_background=args.shap_background,
+        shap_max_patches=args.shap_max_patches,
     )
     
     trainer = PatchCoreTrainer(config)
@@ -758,4 +990,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

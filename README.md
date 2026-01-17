@@ -77,6 +77,34 @@ After all clients have finished, run the eval mode for all clients:
   --train-partition-id 0 --train-num-partitions 2 /
   --device cuda --log-level INFO
 
+### Optional: Client-side Differential Privacy (DP)
+Enable DP on upload to clip memory bank vectors and add calibrated noise:
+```
+./src/federated/client_sequential.py \
+  --mode upload --client-id 1 --categories engine_wiring pipe_clip \
+  --server-host 10.8.0.5 --server-port 8081 \
+  --dataset-root data/raw \
+  --output-dir federated_sequentially/artifacts/federated_sequential/federated_improved/clients \
+  --dp --dp-epsilon 2.0 --dp-delta 1e-5 --dp-clip-norm 1.0
+```
+DP budget is written to `client_<id>_dp_budget.json` under the client output directory.
+
+### Optional: Interpretability Outputs (Grad-CAM + SHAP)
+Generate anomaly overlays and Grad-CAM-style saliency maps during evaluation:
+```
+./src/federated/client_sequential.py \
+  --mode eval --client-id 1 --categories engine_wiring pipe_clip \
+  --server-host 10.8.0.5 --server-port 8081 \
+  --dataset-root data/raw \
+  --output-dir federated_sequentially/artifacts/federated_sequential/federated_improved/clients \
+  --interpretability --saliency-max-images 10
+```
+For SHAP-based post-hoc explanations over patch embeddings, install `shap` and set:
+```
+--shap-max-images 5 --shap-background 20 --shap-max-patches 64
+```
+Outputs are saved under `artifacts/.../interpretability/<category>/`.
+
 
 ## Adding Fairness-Aware Coreset Selection
 

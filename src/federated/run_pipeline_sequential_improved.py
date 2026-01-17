@@ -101,6 +101,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--dp-delta", type=float, default=1e-5)
     p.add_argument("--dp-clip-norm", type=float, default=1.0)
     p.add_argument("--dp-seed", type=int, default=None)
+    p.add_argument("--interpretability", action="store_true")
+    p.add_argument("--saliency-max-images", type=int, default=10)
+    p.add_argument("--shap-max-images", type=int, default=0)
+    p.add_argument("--shap-background", type=int, default=20)
+    p.add_argument("--shap-max-patches", type=int, default=64)
     return p.parse_args()
 
 
@@ -173,6 +178,16 @@ def main() -> None:
         )
         if args.dp_seed is not None:
             common_client_args.extend(["--dp-seed", str(args.dp_seed)])
+    if args.interpretability:
+        common_client_args.extend(
+            [
+                "--interpretability",
+                "--saliency-max-images", str(args.saliency_max_images),
+                "--shap-max-images", str(args.shap_max_images),
+                "--shap-background", str(args.shap_background),
+                "--shap-max-patches", str(args.shap_max_patches),
+            ]
+        )
 
     # Upload phase (sequential)
     for c in clients:

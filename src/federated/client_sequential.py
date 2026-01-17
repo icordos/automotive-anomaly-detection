@@ -382,6 +382,13 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--dp-clip-norm", type=float, default=1.0, help="L2 norm clipping threshold")
     p.add_argument("--dp-seed", type=int, default=None, help="Random seed for DP noise")
     
+    # Interpretability arguments
+    p.add_argument("--interpretability", action="store_true")
+    p.add_argument("--saliency-max-images", type=int, default=10)
+    p.add_argument("--shap-max-images", type=int, default=0)
+    p.add_argument("--shap-background", type=int, default=20)
+    p.add_argument("--shap-max-patches", type=int, default=64)
+
     # Fairness arguments
     p.add_argument(
         "--fairness-coreset-mode",
@@ -423,6 +430,11 @@ def main() -> None:
         device=args.device,
         train_partition_id=args.train_partition_id,
         train_num_partitions=args.train_num_partitions,
+        save_interpretability=args.interpretability,
+        saliency_max_images=args.saliency_max_images,
+        shap_max_images=args.shap_max_images,
+        shap_background=args.shap_background,
+        shap_max_patches=args.shap_max_patches,
     )
 
     client = SequentialPatchCoreClient(
