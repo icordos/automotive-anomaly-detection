@@ -61,6 +61,7 @@ class PatchCoreTrainingConfig:
     shap_max_images: int = 0
     shap_background: int = 20
     shap_max_patches: int = 64
+    seg_masks: bool = True
 
     def __post_init__(self) -> None:
         if self.image_size <= 0:
@@ -121,6 +122,7 @@ class AutoVIAnomalyDataset(Dataset):
         train_partition_id: int = 0,
         train_num_partitions: int = 1,
         return_path: bool = False,
+        seg_masks: bool = True,
     ) -> None:
         if split not in {"train", "test"}:
             raise ValueError(f"Unsupported split '{split}'")
@@ -130,18 +132,67 @@ class AutoVIAnomalyDataset(Dataset):
         self.train_partition_id = train_partition_id
         self.train_num_partitions = train_num_partitions
         self.return_path = return_path
-        category_dir = dataset_root / category / category
+        self.seg_masks = seg_masks
+
+        category_dir = self._resolve_category_dir(dataset_root, category)
         if not category_dir.exists():
             raise FileNotFoundError(f"Missing category directory: {category_dir}")
+
         self.items: List[Tuple[Path, Optional[List[Path]], int]] = []
         self._collect_items(category_dir)
+    def _glob_images(self, d: Path) -> List[Path]:
+        exts = ("*.png", "*.jpg", "*.jpeg", "*.bmp", "*.webp")
+        out: List[Path] = []
+        for pat in exts:
+            out.extend(d.glob(pat))
+        return sorted(out)
+
+    def _find_child_ci(self, base: Path, name: str) -> Path:
+        p = base / name
+        if p.exists():
+            return p
+        if base.exists():
+            for c in base.iterdir():
+                if c.is_dir() and c.name.lower() == name.lower():
+                    return c
+        return p  # may not exist
+    @staticmethod
+    def _resolve_category_dir(dataset_root: Path, category: str) -> Path:
+        p1 = dataset_root / category / category
+        if p1.exists():
+            return p1
+        p2 = dataset_root / category
+        return p2
+
+    @staticmethod
+    def _label_from_dirname(dirname: str) -> Optional[int]:
+        name = (dirname or "").strip().lower()
+        if name in {"good", "ok"}:
+            return 0
+        if name in {"ko", "bad", "ng", "defect"}:
+            return 1
+        return None
 
     def _collect_items(self, category_dir: Path) -> None:
         if self.split == "train":
-            train_dir = category_dir / "train" / "good"
-            all_images = sorted(train_dir.glob("*.png"))
+            train_root = category_dir / "train"
+            if not train_root.exists():
+                train_root = category_dir / "training"
 
-            # Optional deterministic partitioning (federated split)
+            good_dir = self._find_child_ci(train_root, "good")
+            ok_dir = self._find_child_ci(train_root, "ok")
+
+            if good_dir.exists():
+                all_images = self._glob_images(good_dir)
+            elif ok_dir.exists():
+                all_images = self._glob_images(ok_dir)
+            else:
+                all_images = []
+                if train_root.exists():
+                    for pat in ("*.png", "*.jpg", "*.jpeg", "*.bmp", "*.webp"):
+                        all_images.extend(train_root.rglob(pat))
+                all_images = sorted(all_images)
+
             train_partition_id = getattr(self, "train_partition_id", 0)
             train_num_partitions = getattr(self, "train_num_partitions", 1)
 
@@ -162,10 +213,12 @@ class AutoVIAnomalyDataset(Dataset):
         for defect_dir in sorted(test_dir.iterdir()):
             if not defect_dir.is_dir():
                 continue
-            label = 0 if defect_dir.name == "good" else 1
+            label = self._label_from_dirname(defect_dir.name)
+            if label is None:
+                label = 0 if defect_dir.name == "good" else 1
             for image_path in sorted(defect_dir.glob("*.png")):
                 mask_paths: Optional[List[Path]] = None
-                if label == 1:
+                if self.seg_masks and label == 1:
                     ground_truth_dir = (
                         category_dir / "ground_truth" / defect_dir.name / image_path.stem
                     )
@@ -188,7 +241,7 @@ class AutoVIAnomalyDataset(Dataset):
 
         label_tensor = torch.tensor(label, dtype=torch.long)
 
-        if self.split == "train" or mask_paths is None:
+        if (not self.seg_masks) or self.split == "train" or mask_paths is None:
             mask_tensor = torch.zeros(
                 (1, image_tensor.shape[-2], image_tensor.shape[-1]), dtype=torch.float32
             )
@@ -288,6 +341,7 @@ class PatchCoreTrainer:
             train_partition_id=self.config.train_partition_id,
             train_num_partitions=self.config.train_num_partitions,
             return_path=split == "test" and self.config.save_interpretability,
+            seg_masks=self.config.seg_masks,
         )
         return DataLoader(
             dataset,
@@ -760,15 +814,24 @@ class PatchCoreTrainer:
             anomaly_scores, anomaly_maps = self._compute_scores(embeddings, patch_shape)
             image_scores.extend(anomaly_scores.cpu().tolist())
             image_labels.extend(labels.cpu().tolist())
-            upsampled_maps = F.interpolate(
-                anomaly_maps,
-                size=masks.shape[-2:],
-                mode="bilinear",
-                align_corners=False,
-            )
-            for upsampled, mask in zip(upsampled_maps, masks):
-                pixel_scores.extend(upsampled.flatten().cpu().tolist())
-                pixel_labels.extend(mask.flatten().long().cpu().tolist())
+
+            if self.config.seg_masks:
+                upsampled_maps = F.interpolate(
+                    anomaly_maps,
+                    size=masks.shape[-2:],
+                    mode="bilinear",
+                    align_corners=False,
+                )
+                for upsampled, mask in zip(upsampled_maps, masks):
+                    pixel_scores.extend(upsampled.flatten().cpu().tolist())
+                    pixel_labels.extend(mask.flatten().long().cpu().tolist())
+            else:
+                upsampled_maps = F.interpolate(
+                    anomaly_maps,
+                    size=masks.shape[-2:],
+                    mode="bilinear",
+                    align_corners=False,
+                )
 
             if self.config.save_interpretability and saliency_saved < self.config.saliency_max_images:
                 for idx in range(images.shape[0]):
@@ -812,9 +875,9 @@ class PatchCoreTrainer:
 
         metrics_dict = {
             "image_roc_auc": self._safe_auc(image_labels, image_scores),
-            "pixel_roc_auc": self._safe_auc(pixel_labels, pixel_scores),
+            "pixel_roc_auc": self._safe_auc(pixel_labels, pixel_scores) if self.config.seg_masks else float("nan"),
             "image_ap": self._safe_average_precision(image_labels, image_scores),
-            "pixel_ap": self._safe_average_precision(pixel_labels, pixel_scores),
+            "pixel_ap": self._safe_average_precision(image_labels, image_scores) if self.config.seg_masks else float("nan"),
         }
 
         del image_scores, image_labels, pixel_scores, pixel_labels, loader
@@ -835,6 +898,7 @@ class PatchCoreTrainer:
             split="test",
             image_transform=self.image_transform,
             mask_transform=self.mask_transform,
+            seg_masks=self.config.seg_masks,
         )
         return len(ds)
 
@@ -923,6 +987,9 @@ def parse_args() -> argparse.Namespace:
         choices=["none", "proportional", "equal"],
         help="Fairness-aware coreset sampling mode",
     )
+
+    parser.add_argument("--seg-masks", action="store_true", default=True)
+    parser.add_argument("--no-seg-masks", dest="seg_masks", action="store_false")
     
     return parser.parse_args()
 
@@ -968,6 +1035,7 @@ def main() -> None:
         shap_max_images=args.shap_max_images,
         shap_background=args.shap_background,
         shap_max_patches=args.shap_max_patches,
+        seg_masks=args.seg_masks,
     )
     
     trainer = PatchCoreTrainer(config)

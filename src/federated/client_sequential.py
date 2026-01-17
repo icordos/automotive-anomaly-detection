@@ -375,6 +375,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--train-partition-id", type=int, default=0)
     p.add_argument("--train-num-partitions", type=int, default=1)
     
+    p.add_argument("--seg-masks", action="store_true", default=True)
+    p.add_argument("--no-seg-masks", dest="seg_masks", action="store_false")
+    
     # Differential Privacy arguments
     p.add_argument("--dp", action="store_true", help="Enable client-side DP before upload")
     p.add_argument("--dp-epsilon", type=float, default=1.0, help="Privacy budget (lower = more private)")
@@ -435,6 +438,7 @@ def main() -> None:
         shap_max_images=args.shap_max_images,
         shap_background=args.shap_background,
         shap_max_patches=args.shap_max_patches,
+        seg_masks=args.seg_masks,
     )
 
     client = SequentialPatchCoreClient(
