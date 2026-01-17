@@ -587,10 +587,12 @@ class PatchCoreTrainer:
     def _compute_gradcam(self, image_tensor: Tensor) -> np.ndarray:
         self.model.feature_extractor.zero_grad(set_to_none=True)
         image_tensor = image_tensor.unsqueeze(0).to(self.model.device)
+        image_tensor.requires_grad_(True)
         with torch.set_grad_enabled(True):
             feats = self.model.feature_extractor(image_tensor)
             feats = {k: v.float() for k, v in feats.items()}
             target_layer = self.config.feature_layers[-1]
+            feats[target_layer].requires_grad_(True)
             feats[target_layer].retain_grad()
             embeddings, patch_shape = self.model.aggregate(feats)
             image_scores, _ = self._compute_scores(embeddings, patch_shape)
