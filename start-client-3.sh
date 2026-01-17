@@ -21,4 +21,6 @@ python ./src/federated/client_sequential.py \
     --coreset-method kcenter --coreset-ratio 0.1 --coreset-max-samples 5000 \
     --coreset-chunk-size 16384 --distance-chunk-size 8192 \
     --train-partition-id 0 --train-num-partitions 2 \
+    --interpretability --saliency-max-images 10 \
+    --shap-max-images 5 --shap-background 20 --shap-max-patches 64 \
     --device mps --log-level INFO
