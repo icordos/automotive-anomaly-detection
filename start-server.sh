@@ -1,4 +1,4 @@
-./src/federated/server_sequential.py \
+python ./src/federated/server_sequential.py \
   --host 0.0.0.0 --port 8081 \
   --expected-client-ids 1 2 3 \
   --server-max-samples 5000 \
