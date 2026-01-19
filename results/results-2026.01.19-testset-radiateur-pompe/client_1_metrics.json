@@ -1,0 +1,8 @@
+{
+  "Pompe_image_roc_auc": 0.9214285714285715,
+  "Pompe_pixel_roc_auc": NaN,
+  "Pompe_image_ap": 0.6392857142857142,
+  "Pompe_pixel_ap": 0.6392857142857142,
+  "avg_auroc": 0.9214285714285715,
+  "total_test_images": 33.0
+}

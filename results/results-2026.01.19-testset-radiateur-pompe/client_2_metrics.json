@@ -1,0 +1,8 @@
+{
+  "Radiateur_image_roc_auc": 0.7058823529411764,
+  "Radiateur_pixel_roc_auc": NaN,
+  "Radiateur_image_ap": 0.595959595959596,
+  "Radiateur_pixel_ap": 0.595959595959596,
+  "avg_auroc": 0.7058823529411764,
+  "total_test_images": 38.0
+}
