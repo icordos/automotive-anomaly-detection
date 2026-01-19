@@ -1,0 +1,9 @@
+2026-01-17 23:03:38,797 [INFO] [Server] Starting sequential server on 0.0.0.0:8081
+2026-01-18 06:58:15,375 [INFO] [Server] upload from client_id=1 addr=('127.0.0.1', 50058)
+2026-01-18 14:42:01,018 [INFO] [Server] upload from client_id=2 addr=('127.0.0.1', 63670)
+2026-01-18 14:42:01,019 [INFO] [Server] All clients uploaded. Aggregating global memory banks...
+2026-01-18 14:42:01,026 [INFO] [Server] XFK3_E1D: received 10000 vectors (dim=1536) from 2 clients
+2026-01-18 14:42:34,777 [INFO] [Server] XFK3_E1D: k-center coreset 5000 -> 5000
+2026-01-18 14:42:34,777 [INFO] [Server] XFK3_E1D: global bank shape (5000, 1536)
+2026-01-18 14:42:34,783 [INFO] [Server] Saved global banks snapshot to federated_sequentially/artifacts/federated_sequential/xfk3_2clients/server/global_memory_banks.pkl
+2026-01-18 14:43:43,798 [INFO] [Server] Server stopped.

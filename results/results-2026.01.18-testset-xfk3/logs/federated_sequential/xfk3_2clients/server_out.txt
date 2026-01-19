@@ -1,0 +1,6 @@
+============================================================
+Starting Sequential Federated PatchCore Server
+Expected clients: [1, 2]
+Address: 0.0.0.0:8081
+Server k-center max_samples: 5000
+============================================================
