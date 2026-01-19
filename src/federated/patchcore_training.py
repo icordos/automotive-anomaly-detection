@@ -459,7 +459,7 @@ class PatchCoreTrainer:
             batch_patches = embeddings.shape[0] * embeddings.shape[1]  # bsz * num_patches
             patches_per_image.extend([embeddings.shape[1]] * images.shape[0])
             
-            feature_chunks.append(embeddings.reshape(-1, embeddings.shape[-1]).cpu())
+            feature_chunks.append(embeddings.reshape(-1, embeddings.shape[-1]))
         
         if not feature_chunks:
             raise RuntimeError(f"No training data found for category '{category}'")
@@ -529,7 +529,11 @@ class PatchCoreTrainer:
         if fairness_mode != "none" and subgroup_labels is not None:
             memory_bank = self.apply_fair_coreset(memory_bank, subgroup_labels, fairness_mode)
         else:
-            memory_bank = self._apply_coreset(memory_bank)
+            if self.model.device.type == "cuda":
+                memory_bank = memory_bank.to(self.model.device)
+                memory_bank = self._apply_coreset(memory_bank)
+            else:
+                memory_bank = self._apply_coreset(memory_bank)
         
         self.memory_bank = memory_bank.to(self.model.device)
         checkpoint_path = self._save_checkpoint(category, memory_bank, patch_shape)
