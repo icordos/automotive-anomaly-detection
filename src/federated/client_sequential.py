@@ -391,6 +391,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--shap-max-images", type=int, default=0)
     p.add_argument("--shap-background", type=int, default=20)
     p.add_argument("--shap-max-patches", type=int, default=64)
+    p.add_argument("--corruption-prob", type=float, default=0.0)
+    p.add_argument("--corruption-strength", type=float, default=0.2)
+    p.add_argument("--gaussian-noise-std", type=float, default=0.0)
+    p.add_argument("--robust-norm-max", type=float, default=None)
+    p.add_argument("--robust-cosine-min", type=float, default=None)
+    p.add_argument("--anomaly-score-clip", type=float, default=None)
 
     # Fairness arguments
     p.add_argument(
@@ -439,6 +445,12 @@ def main() -> None:
         shap_background=args.shap_background,
         shap_max_patches=args.shap_max_patches,
         seg_masks=args.seg_masks,
+        corruption_prob=args.corruption_prob,
+        corruption_strength=args.corruption_strength,
+        gaussian_noise_std=args.gaussian_noise_std,
+        robust_norm_max=args.robust_norm_max,
+        robust_cosine_min=args.robust_cosine_min,
+        anomaly_score_clip=args.anomaly_score_clip,
     )
 
     client = SequentialPatchCoreClient(

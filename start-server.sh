@@ -3,5 +3,9 @@
   --expected-client-ids 1 2 3 \
   --server-max-samples 5000 \
   --server-coreset-chunk-size 16384 \
+  --enable-bank-audit \
+  --bank-norm-min 0.1 --bank-norm-max 10.0 --bank-cosine-min 0.0 \
+  --bank-max-outlier-fraction 0.3 \
+  --aggregation-method trimmed_mean --aggregation-trim-fraction 0.1 --aggregation-cosine-min 0.2 \
   --output-dir artifacts/server \
   --log-level INFO

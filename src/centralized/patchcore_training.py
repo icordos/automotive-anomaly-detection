@@ -46,6 +46,19 @@ def log_gpu_memory(prefix: str = "") -> None:
         )
 
 
+class AddGaussianNoise:
+    """Add Gaussian noise to a tensor image."""
+
+    def __init__(self, std: float) -> None:
+        self.std = float(std)
+
+    def __call__(self, tensor: Tensor) -> Tensor:
+        if self.std <= 0:
+            return tensor
+        noise = torch.randn_like(tensor) * self.std
+        return tensor + noise
+
+
 @dataclass
 class PatchCoreTrainingConfig:
     """Holds common configuration for the PatchCore trainer."""
@@ -63,6 +76,12 @@ class PatchCoreTrainingConfig:
     coreset_chunk_size: int = 8192
     use_mixed_precision: bool = True
     distance_chunk_size: int = 8192
+    corruption_prob: float = 0.0
+    corruption_strength: float = 0.2
+    gaussian_noise_std: float = 0.0
+    robust_norm_max: Optional[float] = None
+    robust_cosine_min: Optional[float] = None
+    anomaly_score_clip: Optional[float] = None
 
     def __post_init__(self) -> None:
         """Validate configuration parameters."""
@@ -91,6 +110,30 @@ class PatchCoreTrainingConfig:
         if self.coreset_method.lower() not in {"kcenter", "farthest", "random"}:
             raise ValueError(
                 f"coreset_method must be 'kcenter', 'farthest', or 'random', got {self.coreset_method}"
+            )
+        if not 0.0 <= self.corruption_prob <= 1.0:
+            raise ValueError(
+                f"corruption_prob must be in [0, 1], got {self.corruption_prob}"
+            )
+        if self.corruption_strength < 0.0:
+            raise ValueError(
+                f"corruption_strength must be >= 0, got {self.corruption_strength}"
+            )
+        if self.gaussian_noise_std < 0.0:
+            raise ValueError(
+                f"gaussian_noise_std must be >= 0, got {self.gaussian_noise_std}"
+            )
+        if self.robust_norm_max is not None and self.robust_norm_max <= 0:
+            raise ValueError(
+                f"robust_norm_max must be positive, got {self.robust_norm_max}"
+            )
+        if self.robust_cosine_min is not None and not -1.0 <= self.robust_cosine_min <= 1.0:
+            raise ValueError(
+                f"robust_cosine_min must be in [-1, 1], got {self.robust_cosine_min}"
+            )
+        if self.anomaly_score_clip is not None and self.anomaly_score_clip <= 0:
+            raise ValueError(
+                f"anomaly_score_clip must be positive, got {self.anomaly_score_clip}"
             )
 
     def resolved_device(self) -> str:
@@ -253,17 +296,51 @@ class PatchCoreTrainer:
         self.memory_bank: Optional[Tensor] = None
         self.output_dir = config.output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.image_transform = transforms.Compose(
-            [
-                transforms.Resize((config.image_size, config.image_size), interpolation=InterpolationMode.BICUBIC),
-                transforms.ToTensor(),
-                transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
-            ]
-        )
+        self.train_image_transform = self._build_train_transform()
+        self.eval_image_transform = self._build_eval_transform()
         self.mask_transform = transforms.Compose(
             [
                 transforms.Resize((config.image_size, config.image_size), interpolation=InterpolationMode.NEAREST),
                 transforms.ToTensor(),
+            ]
+        )
+
+    def _build_train_transform(self) -> transforms.Compose:
+        augmentations = []
+        if self.config.corruption_prob > 0:
+            strength = self.config.corruption_strength
+            augmentations.append(
+                transforms.RandomApply(
+                    [
+                        transforms.ColorJitter(
+                            brightness=0.4 * strength,
+                            contrast=0.4 * strength,
+                            saturation=0.4 * strength,
+                            hue=0.1 * strength,
+                        ),
+                        transforms.RandomAutocontrast(),
+                        transforms.RandomAdjustSharpness(sharpness_factor=1.0 + strength),
+                        transforms.GaussianBlur(kernel_size=3, sigma=(0.1, 1.5 + 2 * strength)),
+                    ],
+                    p=self.config.corruption_prob,
+                )
+            )
+        return transforms.Compose(
+            [
+                transforms.Resize((self.config.image_size, self.config.image_size), interpolation=InterpolationMode.BICUBIC),
+                *augmentations,
+                transforms.ToTensor(),
+                AddGaussianNoise(self.config.gaussian_noise_std),
+                transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
+            ]
+        )
+
+    def _build_eval_transform(self) -> transforms.Compose:
+        return transforms.Compose(
+            [
+                transforms.Resize((self.config.image_size, self.config.image_size), interpolation=InterpolationMode.BICUBIC),
+                transforms.ToTensor(),
+                transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
             ]
         )
 
@@ -281,7 +358,7 @@ class PatchCoreTrainer:
             dataset_root=self.config.dataset_root,
             category=category,
             split=split,
-            image_transform=self.image_transform,
+            image_transform=self.train_image_transform if split == "train" else self.eval_image_transform,
             mask_transform=self.mask_transform,
         )
         return DataLoader(
@@ -327,6 +404,7 @@ class PatchCoreTrainer:
         )
         log_gpu_memory("[After extraction] ")
 
+        memory_bank = self._filter_adversarial_features(memory_bank)
         memory_bank = self._apply_coreset(memory_bank)
         self.memory_bank = memory_bank.to(self.model.device)
         checkpoint_path = self._save_checkpoint(category, memory_bank, patch_shape)
@@ -338,6 +416,36 @@ class PatchCoreTrainer:
         )
         log_gpu_memory("[After training] ")
         return checkpoint_path, memory_bank, patch_shape
+
+    def _filter_adversarial_features(self, features: Tensor) -> Tensor:
+        if self.config.robust_norm_max is None and self.config.robust_cosine_min is None:
+            return features
+
+        mask = torch.ones(features.shape[0], dtype=torch.bool)
+        if self.config.robust_norm_max is not None:
+            norms = torch.linalg.norm(features, dim=1)
+            mask &= norms <= float(self.config.robust_norm_max)
+
+        if self.config.robust_cosine_min is not None:
+            centroid = torch.mean(features, dim=0)
+            denom = torch.linalg.norm(centroid) + 1e-12
+            if float(denom) > 0:
+                cosine = torch.matmul(features, centroid) / (torch.linalg.norm(features, dim=1) * denom + 1e-12)
+                mask &= cosine >= float(self.config.robust_cosine_min)
+
+        kept = int(mask.sum().item())
+        if kept == 0:
+            logging.warning("Robust filtering removed all features; keeping original bank.")
+            return features
+        if kept < features.shape[0]:
+            logging.info(
+                "Robust filtering kept %d/%d features (norm_max=%s cosine_min=%s)",
+                kept,
+                features.shape[0],
+                self.config.robust_norm_max,
+                self.config.robust_cosine_min,
+            )
+        return features[mask]
 
     def load_memory_bank(self, memory_bank: Tensor, patch_shape: Tuple[int, int]) -> None:
         """Load an external memory bank (e.g., from federated server)."""
@@ -562,8 +670,12 @@ class PatchCoreTrainer:
             min_distances[start:end] = chunk_min_distances
 
         patch_scores = min_distances.reshape(bsz, patch_shape[0], patch_shape[1])
+        if self.config.anomaly_score_clip is not None:
+            patch_scores = torch.clamp(patch_scores, max=float(self.config.anomaly_score_clip))
         anomaly_maps = patch_scores.unsqueeze(1)
         image_scores = patch_scores.amax(dim=(-2, -1))
+        if self.config.anomaly_score_clip is not None:
+            image_scores = torch.clamp(image_scores, max=float(self.config.anomaly_score_clip))
         return image_scores, anomaly_maps
 
     @staticmethod
@@ -632,6 +744,12 @@ def parse_args() -> argparse.Namespace:
         default=8192,
         help="Chunk size for distance computation during evaluation to avoid OOM",
     )
+    parser.add_argument("--corruption-prob", type=float, default=0.0)
+    parser.add_argument("--corruption-strength", type=float, default=0.2)
+    parser.add_argument("--gaussian-noise-std", type=float, default=0.0)
+    parser.add_argument("--robust-norm-max", type=float, default=None)
+    parser.add_argument("--robust-cosine-min", type=float, default=None)
+    parser.add_argument("--anomaly-score-clip", type=float, default=None)
     parser.add_argument(
         "--no-mixed-precision",
         action="store_true",
@@ -680,6 +798,12 @@ def main() -> None:
         distance_chunk_size=args.distance_chunk_size,
         use_mixed_precision=not args.no_mixed_precision,
         device=args.device,
+        corruption_prob=args.corruption_prob,
+        corruption_strength=args.corruption_strength,
+        gaussian_noise_std=args.gaussian_noise_std,
+        robust_norm_max=args.robust_norm_max,
+        robust_cosine_min=args.robust_cosine_min,
+        anomaly_score_clip=args.anomaly_score_clip,
     )
     trainer = PatchCoreTrainer(config)
     summary: Dict[str, Dict[str, Optional[Dict[str, float]]]] = {}
@@ -695,4 +819,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
