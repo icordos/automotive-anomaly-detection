@@ -1,9 +1,0 @@
-2026-01-18 20:25:21,879 [INFO] [Server] Starting sequential server on 0.0.0.0:8081
-2026-01-18 21:06:09,998 [INFO] [Server] upload from client_id=1 addr=('127.0.0.1', 58684)
-2026-01-18 21:50:47,016 [INFO] [Server] upload from client_id=2 addr=('127.0.0.1', 51096)
-2026-01-18 21:50:47,017 [INFO] [Server] All clients uploaded. Aggregating global memory banks...
-2026-01-18 21:50:47,020 [INFO] [Server] Pompe: received 5000 vectors (dim=1536) from 1 clients
-2026-01-18 21:50:47,020 [INFO] [Server] Pompe: global bank shape (5000, 1536)
-2026-01-18 21:50:47,022 [INFO] [Server] Radiateur: received 5000 vectors (dim=1536) from 1 clients
-2026-01-18 21:50:47,022 [INFO] [Server] Radiateur: global bank shape (5000, 1536)
-2026-01-18 21:50:47,031 [INFO] [Server] Saved global banks snapshot to federated_sequentially/artifacts/federated_sequential/pompe_radiateur_2clients/server/global_memory_banks.pkl
