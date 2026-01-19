@@ -583,7 +583,7 @@ To address potential bias in federated learning scenarios where clients possess 
 
 The fairness-aware coreset selection algorithm operates in several key stages to ensure equitable representation of all data subgroups:
 
-\paragraph{Input Requirements} \\
+\paragraph{Input Requirements} 
 
 The algorithm requires four inputs:
 \begin{itemize}
@@ -593,7 +593,7 @@ The algorithm requires four inputs:
     \item A fairness mode selection: none, proportional, or equal
 \end{itemize}
 
-\paragraph{Algorithm Steps} \\
+\paragraph{Algorithm Steps} 
 
 \textbf{Step 1: Subgroup Detection}
 
@@ -661,6 +661,36 @@ Moreover, the approach is flexible and easily configurable, allowing practitione
 
 \FloatBarrier
 
+\section{Interpretability for understanding model behavior}
+
+We implement the following enhancements for interpretability:
+\begin{itemize}
+	\item Optional saving of anomaly heatmap overlays per test image (upsampled patch scores).
+  	\item Grad-CAM visualization from the last feature layer to highlight contributing regions. \cite{Selvaraju_2019}
+	\item Optional SHAP explanations over top‑K patches to attribute anomaly scores. \cite{lundberg2017unifiedapproachinterpretingmodel}
+	\item JSON metadata saved alongside images with patch shape and filenames.
+\end{itemize}
+
+% Interpretability visualization snapshot
+\begin{figure*}[t]
+\centering
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{c c c c}
+ & \textbf{Anomaly} & \textbf{Grad-CAM} & \textbf{SHAP} \\
+\texttt{engine\_wiring} &
+\includegraphics[width=0.26\textwidth]{interpretability/engine_wiring_0003_anomaly.png} &
+\includegraphics[width=0.26\textwidth]{interpretability/engine_wiring_0003_gradcam.png} &
+\includegraphics[width=0.26\textwidth]{interpretability/engine_wiring_0003_shap.png} \\
+\texttt{pipe\_clip} &
+\includegraphics[width=0.26\textwidth]{interpretability/pipe_clip_0003_anomaly.png} &
+\includegraphics[width=0.26\textwidth]{interpretability/pipe_clip_0003_gradcam.png} &
+\includegraphics[width=0.26\textwidth]{interpretability/pipe_clip_0003_shap.png} \\
+\end{tabular}
+\caption{Interpretability views for two categories. Anomaly heatmaps show patch-distance scores, Grad-CAM highlights salient features, and SHAP shows patch attributions for the anomaly score.}
+\label{fig:interpretability-kcenter}
+\end{figure*}
+\FloatBarrier
+
 \section{Conclusions and Future Steps}
 
 Our preliminary investigation demonstrates a significant performance gap between centralized and federated PatchCore implementations for industrial anomaly detection. While centralized models achieve respectable results (average pixel AUROC of 0.857), the federated approach suffers from 60-78\% performance degradation.
@@ -714,6 +744,9 @@ To address these limitations and advance trustworthy AI principles, we propose t
 \end{itemize}
 
 By systematically addressing these dimensions—aggregation quality, privacy preservation, and explainability—we aim to develop a federated anomaly detection system that maintains competitive performance while respecting data confidentiality and providing transparent decision-making for industrial deployment.
+
+\appendix
+\section{Repository description}
 
 \bibliographystyle{plainnat}  % Choose a bibliography style (plainnat, ieee, etc.)
 \bibliography{references}  % Load the .bib file (without the .bib extension)
