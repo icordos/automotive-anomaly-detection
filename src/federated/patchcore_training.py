@@ -550,7 +550,7 @@ class PatchCoreTrainer:
         if self.config.robust_norm_max is None and self.config.robust_cosine_min is None:
             return features
 
-        mask = torch.ones(features.shape[0], dtype=torch.bool)
+        mask = torch.ones(features.shape[0], dtype=torch.bool, device=features.device)
         if self.config.robust_norm_max is not None:
             norms = torch.linalg.norm(features, dim=1)
             mask &= norms <= float(self.config.robust_norm_max)
