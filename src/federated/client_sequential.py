@@ -110,6 +110,7 @@ class SequentialPatchCoreClient:
         dp_clip_norm: float,
         dp_seed: int | None,
         fairness_mode: str = "none",
+        upload_chunk_rows: int = 50000,
     ) -> None:
         self.client_id = client_id
         self.categories = categories
@@ -121,6 +122,7 @@ class SequentialPatchCoreClient:
         self.dp_clip_norm = dp_clip_norm
         self.dp_seed = dp_seed
         self.fairness_mode = fairness_mode
+        self.upload_chunk_rows = upload_chunk_rows
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         self.trainer = PatchCoreTrainer(config)
@@ -258,17 +260,57 @@ class SequentialPatchCoreClient:
         # Apply DP if enabled
         banks_np = self._apply_dp(banks_np)
 
-        payload = {
-            "action": "upload",
+        if self.upload_chunk_rows <= 0:
+            raise ValueError("upload_chunk_rows must be positive.")
+
+        expected_chunks: Dict[str, int] = {}
+        for cat, mb in banks_np.items():
+            total = mb.shape[0]
+            if total == 0:
+                expected_chunks[cat] = 0
+            else:
+                expected_chunks[cat] = int(np.ceil(total / self.upload_chunk_rows))
+
+        init_payload = {
+            "action": "upload_init",
             "client_id": self.client_id,
             "categories": self.categories,
             "patch_shapes": self.patch_shapes,
-            "memory_banks": banks_np,
+            "expected_chunks": expected_chunks,
         }
-        resp = rpc(server_host, server_port, payload, timeout_s=300.0)
+        resp = rpc(server_host, server_port, init_payload, timeout_s=300.0)
         if not resp.get("ok"):
-            raise RuntimeError(f"Upload failed: {resp}")
-        logging.info("[Client %d] Upload OK (DP=%s)", self.client_id, self.dp_enabled)
+            raise RuntimeError(f"Upload init failed: {resp}")
+
+        for cat, mb in banks_np.items():
+            total = mb.shape[0]
+            if total == 0:
+                continue
+            n_chunks = expected_chunks[cat]
+            for chunk_idx in range(n_chunks):
+                start = chunk_idx * self.upload_chunk_rows
+                end = min(start + self.upload_chunk_rows, total)
+                chunk = mb[start:end]
+                chunk_payload = {
+                    "action": "upload_chunk",
+                    "client_id": self.client_id,
+                    "category": cat,
+                    "chunk_idx": chunk_idx,
+                    "total_chunks": n_chunks,
+                    "data": chunk,
+                }
+                resp = rpc(server_host, server_port, chunk_payload, timeout_s=300.0)
+                if not resp.get("ok"):
+                    raise RuntimeError(f"Upload chunk failed: {resp}")
+
+        finish_payload = {
+            "action": "upload_complete",
+            "client_id": self.client_id,
+        }
+        resp = rpc(server_host, server_port, finish_payload, timeout_s=300.0)
+        if not resp.get("ok"):
+            raise RuntimeError(f"Upload complete failed: {resp}")
+        logging.info("[Client %d] Upload OK (DP=%s, chunks=%s)", self.client_id, self.dp_enabled, expected_chunks)
 
     def download_global(self, server_host: str, server_port: int) -> Tuple[Dict[str, torch.Tensor], Dict[str, Tuple[int, int]]]:
         """Download global aggregated memory banks from server."""
@@ -406,6 +448,7 @@ def parse_args() -> argparse.Namespace:
         choices=["none", "proportional", "equal"],
         help="Fairness-aware coreset sampling mode",
     )
+    p.add_argument("--upload-chunk-rows", type=int, default=50000)
     
     return p.parse_args()
 
@@ -464,6 +507,7 @@ def main() -> None:
         dp_clip_norm=args.dp_clip_norm,
         dp_seed=args.dp_seed,
         fairness_mode=args.fairness_coreset_mode,
+        upload_chunk_rows=args.upload_chunk_rows,
     )
 
     if args.mode == "upload":

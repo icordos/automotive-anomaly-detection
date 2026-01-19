@@ -76,6 +76,7 @@ def kcenter_greedy_torch(features: np.ndarray, target: int, chunk_size: int = 16
 class ServerState:
     expected_client_ids: List[int]
     uploads: Dict[int, dict]
+    pending_uploads: Dict[int, dict]
     global_ready: bool
     global_banks: Dict[str, np.ndarray]
     patch_shapes: Dict[str, Tuple[int, int]]
@@ -111,6 +112,7 @@ class SequentialFederatedServer:
         self.state = ServerState(
             expected_client_ids=expected_client_ids,
             uploads={},
+            pending_uploads={},
             global_ready=False,
             global_banks={},
             patch_shapes={},
@@ -286,6 +288,89 @@ class SequentialFederatedServer:
             )
         logging.info("[Server] Saved global banks snapshot to %s", snapshot_path)
 
+    def _init_chunked_upload(
+        self,
+        client_id: int,
+        categories: List[str],
+        patch_shapes: Dict[str, Tuple[int, int]],
+        expected_chunks: Dict[str, int],
+    ) -> None:
+        self.state.pending_uploads[client_id] = {
+            "client_id": client_id,
+            "categories": categories,
+            "patch_shapes": patch_shapes,
+            "expected_chunks": expected_chunks,
+            "received_chunks": {cat: set() for cat in categories},
+            "chunks": {cat: {} for cat in categories},
+        }
+
+    def _record_chunk(
+        self,
+        client_id: int,
+        category: str,
+        chunk_idx: int,
+        total_chunks: int,
+        data: np.ndarray,
+    ) -> None:
+        pending = self.state.pending_uploads.get(client_id)
+        if pending is None:
+            raise RuntimeError("upload_init must be called before upload_chunk")
+        expected = pending["expected_chunks"].get(category)
+        if expected is None:
+            raise RuntimeError(f"Unexpected category {category}")
+        if expected != total_chunks:
+            raise RuntimeError(f"Total chunks mismatch for {category}: {expected} vs {total_chunks}")
+        if not (0 <= chunk_idx < total_chunks):
+            raise RuntimeError(f"Invalid chunk_idx {chunk_idx} for {category}")
+        pending["chunks"][category][chunk_idx] = data
+        pending["received_chunks"][category].add(chunk_idx)
+
+    def _finalize_chunked_upload(self, client_id: int) -> dict:
+        pending = self.state.pending_uploads.get(client_id)
+        if pending is None:
+            return {"ok": False, "error": "no_pending_upload"}
+
+        for cat in pending["categories"]:
+            expected = pending["expected_chunks"].get(cat, 0)
+            received = pending["received_chunks"].get(cat, set())
+            if len(received) != expected:
+                return {
+                    "ok": False,
+                    "error": f"missing_chunks:{cat}:{len(received)}/{expected}",
+                }
+
+        memory_banks: Dict[str, np.ndarray] = {}
+        for cat in pending["categories"]:
+            expected = pending["expected_chunks"].get(cat, 0)
+            if expected == 0:
+                memory_banks[cat] = np.empty((0, 0), dtype=np.float32)
+                continue
+            chunks = pending["chunks"][cat]
+            ordered = [chunks[idx] for idx in range(expected)]
+            memory_banks[cat] = np.concatenate(ordered, axis=0)
+
+        if self.enable_bank_audit:
+            audited_banks: Dict[str, np.ndarray] = {}
+            for cat in pending["categories"]:
+                mb = memory_banks.get(cat)
+                if mb is None:
+                    continue
+                filtered, failed = self._audit_memory_bank(mb, cat, client_id)
+                if failed:
+                    return {"ok": False, "error": f"audit_failed:{cat}"}
+                audited_banks[cat] = filtered
+            memory_banks = audited_banks
+
+        self.state.uploads[client_id] = {
+            "client_id": client_id,
+            "categories": list(pending["categories"]),
+            "patch_shapes": dict(pending.get("patch_shapes", {})),
+            "memory_banks": memory_banks,
+        }
+        self.state.pending_uploads.pop(client_id, None)
+        self._aggregate_if_ready()
+        return {"ok": True, "uploaded": True}
+
     def _handle_client(self, conn: socket.socket, addr: tuple) -> None:
         with conn:
             req = recv_msg(conn)
@@ -321,6 +406,41 @@ class SequentialFederatedServer:
                 }
                 send_msg(conn, {"ok": True, "uploaded": True})
                 self._aggregate_if_ready()
+                return
+            if action == "upload_init":
+                client_id = int(req["client_id"])
+                logging.info("[Server] upload_init from client_id=%s addr=%s", client_id, addr)
+
+                if client_id not in self.state.expected_client_ids:
+                    send_msg(conn, {"ok": False, "error": f"unexpected client_id {client_id}"})
+                    return
+
+                categories = list(req["categories"])
+                patch_shapes = dict(req.get("patch_shapes", {}))
+                expected_chunks = dict(req.get("expected_chunks", {}))
+                self._init_chunked_upload(client_id, categories, patch_shapes, expected_chunks)
+                send_msg(conn, {"ok": True, "init": True})
+                return
+
+            if action == "upload_chunk":
+                client_id = int(req["client_id"])
+                category = req["category"]
+                chunk_idx = int(req["chunk_idx"])
+                total_chunks = int(req["total_chunks"])
+                data = req["data"]
+                try:
+                    self._record_chunk(client_id, category, chunk_idx, total_chunks, data)
+                except Exception as exc:
+                    send_msg(conn, {"ok": False, "error": str(exc)})
+                    return
+                send_msg(conn, {"ok": True, "received": True})
+                return
+
+            if action == "upload_complete":
+                client_id = int(req["client_id"])
+                logging.info("[Server] upload_complete from client_id=%s addr=%s", client_id, addr)
+                resp = self._finalize_chunked_upload(client_id)
+                send_msg(conn, resp)
                 return
 
             if action == "status":
