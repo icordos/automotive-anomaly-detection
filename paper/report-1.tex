@@ -253,7 +253,7 @@ For each of the six AutoVI categories, we train a separate PatchCore model, as e
 
 \subsection{Centralized Learning Results}
 
-We first establish baseline performance by training PatchCore models in a centralized manner, where all training data for each category is available to a single model. Table \ref{tab:centralized_results} presents the performance metrics across all six categories.
+We first establish baseline performance by training PatchCore models in a centralized manner, where all training data for each category is available to a single model. Table \ref{tab:centralized_results} presents the performance metrics across all six categories using random coreset sampling.
 
 \begin{table}[H]
     \centering
@@ -271,11 +271,55 @@ We first establish baseline performance by training PatchCore models in a centra
         \textbf{Average}   & 0.592 & 0.857 & 0.417 & 0.054 \\
         \hline
     \end{tabular}
-    \caption{Centralized PatchCore performance on AutoVI dataset. AUROC = Area Under ROC Curve, AP = Average Precision.}
+    \caption{Centralized PatchCore with random coreset performance on AutoVI dataset. AUROC = Area Under ROC Curve, AP = Average Precision.}
     \label{tab:centralized_results}
 \end{table}
 
-The centralized models achieve strong pixel-level AUROC scores (average 0.857), indicating good localization of defects. Image-level AUROC is more modest (average 0.592), reflecting the challenge of binary classification on this industrial dataset. Notably, underbody\_screw achieves exceptional pixel-level AUROC of 0.988, while underbody\_pipes shows the best image-level performance at 0.829.
+The centralized models using random sampling achieve strong pixel-level AUROC scores (average 0.857), indicating good localization of defects. Image-level AUROC is more modest (average 0.592), reflecting the challenge of binary classification on this industrial dataset. Notably, underbody\_screw achieves exceptional pixel-level AUROC of 0.988, while underbody\_pipes shows the best image-level performance at 0.829.
+\\
+
+Next we employ K-center coreset sampling, which greedily selects the most diverse subset of features by repeatedly choosing the point farthest from the current selected set, approximating a minimal-cover representative set.
+
+\begin{table}[H]
+      \centering
+      \begin{tabular}{l c c c c}
+          \hline
+          \textbf{Category} & \textbf{Image AUROC} & \textbf{Pixel AUROC} & \textbf{Image AP} & \textbf{Pixel AP} \\
+          \hline
+          engine\_wiring     & 0.662 & 0.842 & 0.650 & 0.020 \\
+          pipe\_clip         & 0.521 & 0.822 & 0.422 & 0.028 \\
+          pipe\_staple       & 0.469 & 0.830 & 0.383 & 0.077 \\
+          tank\_screw        & 0.570 & 0.776 & 0.241 & 0.015 \\
+          underbody\_pipes   & 0.952 & 0.863 & 0.914 & 0.346 \\
+          underbody\_screw   & 0.951 & 0.990 & 0.341 & 0.260 \\
+          \hline
+          \textbf{Average}   & 0.687 & 0.854 & 0.492 & 0.124 \\
+          \hline
+      \end{tabular}
+      \caption{Centralized PatchCore performance with kcenter coreset on AutoVI dataset. AUROC = Area Under ROC Curve, AP = Average Precision.}
+      \label{tab:centralized_results}
+  \end{table}
+  
+On average, using kcenter coreset sampling improves Image AUROC (+0.095) and Image AP (+0.075), while Pixel AUROC is essentially flat ($-0.003$) and Pixel AP improves (+0.070). The biggest gains are in the underbody categories (both image- and pixel-level metrics jump notably), while pipe\_staple's image AUROC drops relative to the previous ablation. Overall, the updated results shift toward stronger image-level discrimination without a clear change in pixel AUROC.
+
+In the figures below we can observe the difference is a visual manner.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{comparison-central-random-kcenter.png}
+    \caption{Comprehensive performance comparison showing: (top-left) image-level AUROC, (top-right) pixel-level AUROC, (bottom-left) performance degradation heatmap, (bottom-right) average metrics across all categories.}
+    \label{fig:comparisoncrk002}
+\end{figure}
+\FloatBarrier
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{comparison-central-random-kcenter-detailed.png}
+    \caption{Detailed per-category comparison of all four evaluation metrics (Image AUROC, Pixel AUROC, Image AP, Pixel AP) between centralized and federated approaches.}
+    \label{fig:detailed_comparisoncrk002}
+\end{figure}
+\FloatBarrier
+
+
 
 \section{Federated Setup}
 
