@@ -794,7 +794,79 @@ To address these limitations and advance trustworthy AI principles, we propose t
 By systematically addressing these dimensions—aggregation quality, privacy preservation, and explainability—we aim to develop a federated anomaly detection system that maintains competitive performance while respecting data confidentiality and providing transparent decision-making for industrial deployment.
 
 \appendix
-\section{Repository description}
+\section{Repository Description}
+
+The complete implementation and experimental setup for this project is available at: \url{https://github.com/matei-neaga/automotive-anomaly-detection}
+
+\subsection{Directory Structure}
+
+The repository is organized as follows:
+
+\begin{description}
+    \item[\texttt{src/}] Main source code directory containing all implementations:
+    \begin{itemize}
+        \item \texttt{centralized/}: Centralized PatchCore training and evaluation pipeline
+        \item \texttt{federated/}: Final federated learning implementation with sequential client-server communication
+        \item \texttt{federated-stage1/}: Initial federated learning prototype
+        \item \texttt{data/}: Dataset handling utilities and download scripts
+        \item \texttt{scripts\_dp\_fairness/}: Experimental scripts for differential privacy and fairness-aware coreset selection
+        \item \texttt{scripts\_no\_dp\_fairness/}: Baseline experimental scripts
+    \end{itemize}
+    
+    \item[\texttt{data/}] Directory for storing the AutoVI dataset and related analyses
+    \begin{itemize}
+        \item \texttt{data\_analysis\_report.md}: Documentation of dataset structure and statistics
+    \end{itemize}
+    
+    \item[\texttt{results/}] Experimental results and artifacts from different runs:
+    \begin{itemize}
+        \item Timestamped directories containing client metrics, server outputs, and logs
+        \item Supports both centralized and federated configurations with various privacy settings (DP, fairness)
+        \item Includes robustness testing results with different corruption levels
+    \end{itemize}
+    
+    \item[\texttt{paper/}] LaTeX source code for the research paper:
+    \begin{itemize}
+        \item \texttt{report-1.tex}: Main paper document
+        \item \texttt{neurips\_2024.sty}: NeurIPS 2024 conference style
+        \item \texttt{references.bib}: Bibliography entries
+        \item \texttt{interpretability/}: Visualization outputs (Grad-CAM, SHAP, anomaly overlays)
+    \end{itemize}
+    
+    \item[\texttt{docs/}] Documentation:
+    \begin{itemize}
+        \item \texttt{federated\_guide.md}: Comprehensive guide for running federated experiments
+        \item \texttt{croissant.json}: Croissant metadata for dataset description
+        \item \texttt{datasheet}: Datasheet documentation following Gebru et al. framework
+    \end{itemize}
+\end{description}
+
+\subsection{Key Files and Usage}
+
+\begin{description}
+    \item[\texttt{requirements.txt}] Python package dependencies (flwr, torch, torchvision, scikit-learn, etc.)
+    
+    \item[\texttt{start-server.sh}, \texttt{start-client-*.sh}] Bash scripts for launching federated learning experiments
+    
+    \item[\texttt{start-centralized.sh}] Script for running centralized training baseline
+\end{description}
+
+\subsection{Running Experiments}
+
+Setup requirements:
+\begin{enumerate}
+    \item Install Python dependencies: \texttt{pip install -r requirements.txt}
+    \item Download the AutoVI dataset: \texttt{./src/data/download\_datasets.sh --data-root data}
+\end{enumerate}
+
+To run centralized baseline:
+\begin{verbatim}
+./src/centralized/patchcore_training.py \
+  --dataset-root data/raw \
+  --categories engine_wiring pipe_clip
+\end{verbatim}
+
+To run federated experiments, start the server first, then launch multiple clients. Refer to \texttt{docs/federated\_guide.md} for detailed configuration options including differential privacy and fairness-aware coreset selection.
 
 \bibliographystyle{plainnat}  % Choose a bibliography style (plainnat, ieee, etc.)
 \bibliography{references}  % Load the .bib file (without the .bib extension)
