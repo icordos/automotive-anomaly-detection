@@ -14,7 +14,7 @@ python ./src/federated/client_sequential.py \
     --mode "$MODE" \
     --client-id 2 \
     --categories pipe_staple tank_screw \
-    --server-host 10.205.0.116 --server-port 8081 \
+    --server-host 127.0.0.1 --server-port 8081 \
     --dataset-root data/raw \
     --output-dir artifacts/clients \
     --image-size 512 --batch-size 4 --num-workers 4 \
