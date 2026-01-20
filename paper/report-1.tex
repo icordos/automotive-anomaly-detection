@@ -564,7 +564,7 @@ In order to progress this we implemented a number of enhancements:
 	\item We implemented deterministic train splits 
 \end{itemize}
 
-The two figures below visualize the comparisons between the first federated implementation versus the current one versus the baseline centralized training loop.
+The two figures below visualize the comparisons between the federated implementation versus the baseline centralized training loop, all using kcenter for coreset sampling.
 
 \begin{figure}[H]
     \centering
@@ -810,6 +810,21 @@ We implement the following enhancements for interpretability:
 \subsection{Robustness}
 
  We implemented robustness by injecting controlled corruptions and Gaussian noise during training, then hardening the feature bank and scoring pipeline with norm/cosine filters and optional score clipping. On the federated side, uploads are chunked and audited with norm/cosine sanity checks and outlier handling, and aggregation can be made robust via median/trimmed‑mean client filtering. These options are exposed as CLI flags so we can sweep low/medium/high noise regimes and compare how performance degrades or stabilizes under corruption.
+ 
+ \begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{comparison006.png}
+    \caption{Comprehensive performance comparison showing: (top-left) image-level AUROC, (top-right) pixel-level AUROC, (bottom-left) performance degradation heatmap, (bottom-right) average metrics across all categories.}
+    \label{fig:comparison006}
+\end{figure}
+\FloatBarrier
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{detailed-comparison006.png}
+    \caption{Detailed per-category comparison of all four evaluation metrics (Image AUROC, Pixel AUROC, Image AP, Pixel AP) between centralized and federated approaches.}
+    \label{fig:detailed_comparison006}
+\end{figure}
 
 \section{Experimental Results on Additional Datasets}
 
@@ -909,6 +924,13 @@ Across all three datasets, the proposed approach demonstrates strong image-level
 \end{itemize}
 
 The NaN values observed for pixel-level ROC AUC are expected and stem from the lack of ground-truth segmentation masks. Consequently, image-level metrics provide the most reliable evaluation signal for these datasets.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{extra-comparison.png}
+    \caption{Comparison for image level scores across the 3 categories}
+    \label{fig:extra-comparison}
+\end{figure}
 
 Overall, these results validate the applicability of federated PatchCore to real-world industrial inspection scenarios involving diverse components and limited defect annotations.
 
