@@ -1,0 +1,12 @@
+{
+  "underbody_pipes_image_roc_auc": 0.7566500135025656,
+  "underbody_pipes_pixel_roc_auc": 0.710857120519598,
+  "underbody_pipes_image_ap": 0.7415577726597726,
+  "underbody_pipes_pixel_ap": 0.7415577726597726,
+  "underbody_screw_image_roc_auc": 0.7251931075460487,
+  "underbody_screw_pixel_roc_auc": 0.8536317097497362,
+  "underbody_screw_image_ap": 0.09144381551907386,
+  "underbody_screw_pixel_ap": 0.09144381551907386,
+  "avg_auroc": 0.7409215605243071,
+  "total_test_images": 737.0
+}

@@ -1,0 +1,15 @@
+{
+  "client_id": 3,
+  "per_release_epsilon": 1.0,
+  "delta": 1e-05,
+  "clip_norm": 1.0,
+  "sigma": 4.844805262605389,
+  "noise_std": 4.844805262605389,
+  "composition_steps": 2,
+  "rdp_epsilon": 1.4491876140255657,
+  "rdp_order": 16.0,
+  "categories": [
+    "underbody_pipes",
+    "underbody_screw"
+  ]
+}
