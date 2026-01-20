@@ -20,7 +20,7 @@ python ./src/federated/client_sequential.py \
     --image-size 512 --batch-size 4 --num-workers 4 \
     --coreset-method kcenter --coreset-ratio 0.1 --coreset-max-samples 5000 \
     --coreset-chunk-size 16384 --distance-chunk-size 8192 \
-    --train-partition-id 0 --train-num-partitions 2 \
+    --train-partition-id 0 --train-num-partitions 3 \
     --interpretability --saliency-max-images 10 \
     --shap-max-images 5 --shap-background 20 --shap-max-patches 64 \
     --corruption-prob 0.3 --corruption-strength 0.4 --gaussian-noise-std 0.03 \
