@@ -1,0 +1,58 @@
+{
+  "engine_wiring": {
+    "checkpoint": "artifacts/centralized/engine_wiring_patchcore.pt",
+    "metrics": {
+      "image_roc_auc": 0.6624822926882423,
+      "pixel_roc_auc": 0.8421585713584872,
+      "image_ap": 0.6496995315470124,
+      "pixel_ap": 0.019525612941016457
+    }
+  },
+  "pipe_clip": {
+    "checkpoint": "artifacts/centralized/pipe_clip_patchcore.pt",
+    "metrics": {
+      "image_roc_auc": 0.5205489346334417,
+      "pixel_roc_auc": 0.8223328097924978,
+      "image_ap": 0.4217312667226023,
+      "pixel_ap": 0.027970862590307073
+    }
+  }
+}
+{
+  "pipe_staple": {
+    "checkpoint": "artifacts/centralized/pipe_staple_patchcore.pt",
+    "metrics": {
+      "image_roc_auc": 0.4692671394799054,
+      "pixel_roc_auc": 0.8296527405236012,
+      "image_ap": 0.38322495293933967,
+      "pixel_ap": 0.07710649996533615
+    }
+  },
+  "tank_screw": {
+    "checkpoint": "artifacts/centralized/tank_screw_patchcore.pt",
+    "metrics": {
+      "image_roc_auc": 0.5695796094008606,
+      "pixel_roc_auc": 0.7764301755449803,
+      "image_ap": 0.2406807625122146,
+      "pixel_ap": 0.014630449083332192
+    }
+  },
+  "underbody_pipes": {
+    "checkpoint": "artifacts/centralized/underbody_pipes_patchcore.pt",
+    "metrics": {
+      "image_roc_auc": 0.9517620847961112,
+      "pixel_roc_auc": 0.8632030224367654,
+      "image_ap": 0.9142417817797208,
+      "pixel_ap": 0.3464142212058821
+    }
+  },
+  "underbody_screw": {
+    "checkpoint": "artifacts/centralized/underbody_screw_patchcore.pt",
+    "metrics": {
+      "image_roc_auc": 0.9506833036244801,
+      "pixel_roc_auc": 0.9903207539815678,
+      "image_ap": 0.34071488362189273,
+      "pixel_ap": 0.25963988263953025
+    }
+  }
+}
