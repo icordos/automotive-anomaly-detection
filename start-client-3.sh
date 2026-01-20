@@ -24,7 +24,7 @@ python ./src/federated/client_sequential.py \
     --interpretability --saliency-max-images 10 \
     --shap-max-images 5 --shap-background 20 --shap-max-patches 64 \
     --corruption-prob 0.3 --corruption-strength 0.4 --gaussian-noise-std 0.03 \
-    --robust-norm-max 10.0 --robust-cosine-min 0.0 \
+    --robust-norm-max 70.0 --robust-cosine-min 0.0 \
     --dp --dp-epsilon 1.0 --dp-delta 1e-5 --dp-clip-norm 1.0 --dp-seed 42 \
     --fairness-coreset-mode proportional \
     --device cuda --log-level INFO
