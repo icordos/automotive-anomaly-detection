@@ -735,6 +735,10 @@ We implement the following enhancements for interpretability:
 \end{figure*}
 \FloatBarrier
 
+\section{Robustness}
+
+ We implemented robustness by injecting controlled corruptions and Gaussian noise during training, then hardening the feature bank and scoring pipeline with norm/cosine filters and optional score clipping. On the federated side, uploads are chunked and audited with norm/cosine sanity checks and outlier handling, and aggregation can be made robust via median/trimmed‑mean client filtering. These options are exposed as CLI flags so we can sweep low/medium/high noise regimes and compare how performance degrades or stabilizes under corruption.
+
 \section{Conclusions and Future Steps}
 
 Our preliminary investigation demonstrates a significant performance gap between centralized and federated PatchCore implementations for industrial anomaly detection. While centralized models achieve respectable results (average pixel AUROC of 0.857), the federated approach suffers from 60-78\% performance degradation.
