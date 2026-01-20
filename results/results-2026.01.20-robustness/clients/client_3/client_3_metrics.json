@@ -1,12 +1,12 @@
 {
-  "underbody_pipes_image_roc_auc": 0.5,
-  "underbody_pipes_pixel_roc_auc": 0.5,
-  "underbody_pipes_image_ap": 0.5333333333333333,
-  "underbody_pipes_pixel_ap": 0.5333333333333333,
-  "underbody_screw_image_roc_auc": 0.5,
-  "underbody_screw_pixel_roc_auc": 0.5,
-  "underbody_screw_image_ap": 0.04591836734693878,
-  "underbody_screw_pixel_ap": 0.04591836734693878,
-  "avg_auroc": 0.5,
+  "underbody_pipes_image_roc_auc": 0.9951390764245207,
+  "underbody_pipes_pixel_roc_auc": 0.9295744111406594,
+  "underbody_pipes_image_ap": 0.9959399593641184,
+  "underbody_pipes_pixel_ap": 0.9959399593641184,
+  "underbody_screw_image_roc_auc": 0.9823232323232324,
+  "underbody_screw_pixel_roc_auc": 0.9950139933777018,
+  "underbody_screw_image_ap": 0.590346268304383,
+  "underbody_screw_pixel_ap": 0.590346268304383,
+  "avg_auroc": 0.9887311543738766,
   "total_test_images": 737.0
 }

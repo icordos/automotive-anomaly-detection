@@ -1,12 +1,12 @@
 {
-  "engine_wiring_image_roc_auc": 0.5,
-  "engine_wiring_pixel_roc_auc": 0.5000008075604313,
-  "engine_wiring_image_ap": 0.5304777594728172,
-  "engine_wiring_pixel_ap": 0.5304777594728172,
-  "pipe_clip_image_roc_auc": 0.5,
-  "pipe_clip_pixel_roc_auc": 0.5,
-  "pipe_clip_image_ap": 0.42136498516320475,
-  "pipe_clip_pixel_ap": 0.42136498516320475,
-  "avg_auroc": 0.5,
+  "engine_wiring_image_roc_auc": 0.7337909992372235,
+  "engine_wiring_pixel_roc_auc": 0.8089407904588014,
+  "engine_wiring_image_ap": 0.7422235061458374,
+  "engine_wiring_pixel_ap": 0.7422235061458374,
+  "pipe_clip_image_roc_auc": 0.5509570241964609,
+  "pipe_clip_pixel_roc_auc": 0.7382862440776623,
+  "pipe_clip_image_ap": 0.44781333258518996,
+  "pipe_clip_pixel_ap": 0.44781333258518996,
+  "avg_auroc": 0.6423740117168422,
   "total_test_images": 944.0
 }

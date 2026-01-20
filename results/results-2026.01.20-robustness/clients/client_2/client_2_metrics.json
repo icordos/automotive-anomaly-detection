@@ -1,12 +1,12 @@
 {
-  "pipe_staple_image_roc_auc": 0.5,
-  "pipe_staple_pixel_roc_auc": 0.5,
-  "pipe_staple_image_ap": 0.3836065573770492,
-  "pipe_staple_pixel_ap": 0.3836065573770492,
-  "tank_screw_image_roc_auc": 0.5,
-  "tank_screw_pixel_roc_auc": 0.5,
-  "tank_screw_image_ap": 0.23002421307506055,
-  "tank_screw_pixel_ap": 0.23002421307506055,
-  "avg_auroc": 0.5,
+  "pipe_staple_image_roc_auc": 0.5367794144389889,
+  "pipe_staple_pixel_roc_auc": 0.8009027304039602,
+  "pipe_staple_image_ap": 0.4280421670153354,
+  "pipe_staple_pixel_ap": 0.4280421670153354,
+  "tank_screw_image_roc_auc": 0.5297749089705396,
+  "tank_screw_pixel_roc_auc": 0.8025328992665889,
+  "tank_screw_image_ap": 0.23414420458916885,
+  "tank_screw_pixel_ap": 0.23414420458916885,
+  "avg_auroc": 0.5332771617047642,
   "total_test_images": 718.0
 }
