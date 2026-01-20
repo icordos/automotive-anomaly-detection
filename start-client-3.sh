@@ -23,6 +23,6 @@ python ./src/federated/client_sequential.py \
     --train-partition-id 0 --train-num-partitions 2 \
     --interpretability --saliency-max-images 10 \
     --shap-max-images 5 --shap-background 20 --shap-max-patches 64 \
-    --corruption-prob 0.5 --corruption-strength 0.6 --gaussian-noise-std 0.05 \
+    --corruption-prob 0.1 --corruption-strength 0.2 --gaussian-noise-std 0.01 \
     --robust-norm-max 10.0 --robust-cosine-min 0.0 \
     --device cuda --log-level INFO
