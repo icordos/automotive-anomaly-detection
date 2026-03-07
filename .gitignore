@@ -210,13 +210,25 @@ __marimo__/
 .DS_Store
 
 # LaTeX build artifacts
-paper/report-1.aux
-paper/report-1.bbl
-paper/report-1.blg
-paper/report-1.out
-paper/report-1.pdf
-paper/report-1.synctex.gz
-paper/report-1.toc
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.log
+paper/*.out
+paper/*.toc
+paper/*.lof
+paper/*.lot
+paper/*.fls
+paper/*.fdb_latexmk
+paper/*.synctex.gz
+paper/*.synctex(busy)
+paper/*.nav
+paper/*.snm
+paper/*.vrb
+paper/*.idx
+paper/*.ind
+paper/*.ilg
+paper/*.pdf
 
 # Data downloads/extracts
 data/
