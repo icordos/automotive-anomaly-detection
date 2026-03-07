@@ -1,41 +1,21 @@
 \documentclass{article}
 
-% if you need to pass options to natbib, use, e.g.:
-%     \PassOptionsToPackage{numbers, compress}{natbib}
-% before loading neurips_2024
-
-
-% ready for submission
-%\usepackage{neurips_2024}
-
-
-% to compile a preprint version, e.g., for submission to arXiv, add add the
-% [preprint] option:
      \usepackage[preprint]{neurips_2024}
 
-
-% to compile a camera-ready version, add the [final] option, e.g.:
-%     \usepackage[final]{neurips_2024}
-
-
-% to avoid loading the natbib package, add option nonatbib:
-%    \usepackage[nonatbib]{neurips_2024}
-
 \usepackage{amsmath}
-\usepackage[utf8]{inputenc} % allow utf-8 input
-\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
-\usepackage{hyperref}       % hyperlinks
-\usepackage{url}            % simple URL typesetting
-\usepackage{booktabs}       % professional-quality tables
-\usepackage{amsfonts}       % blackboard math symbols
-\usepackage{nicefrac}       % compact symbols for 1/2, etc.
-\usepackage{microtype}      % microtypography
-\usepackage{xcolor}         % colors
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{booktabs}
+\usepackage{amsfonts}
+\usepackage{nicefrac}
+\usepackage{microtype}
+\usepackage{xcolor}
 \usepackage{titling}
-\usepackage{graphicx} % Required for images
+\usepackage{graphicx}
 \usepackage{placeins}
-\usepackage{subfig}
-\usepackage{natbib} % For better citation handling
+\usepackage{natbib}
 \usepackage{float}
 \usepackage{caption}
 \usepackage{subcaption}
@@ -48,13 +28,7 @@
 \renewcommand{\arraystretch}{1.15}
 \setlength{\tabcolsep}{6pt}
 
-%\usepackage{tocloft}
-\usepackage{hyperref} % Makes ToC entries clickable
 
-% IBM Plex fonts
-\usepackage{plex-serif}   % For main text
-\usepackage{plex-sans}    % For sans-serif
-\usepackage{plex-mono}    % For monospaced
 \usepackage[english]{babel}
 \usepackage[none]{hyphenat}
 
@@ -62,15 +36,6 @@
 \usepackage{adjustbox}
 
 \title{Industrial Anomaly Detection}
-
-
-% The \author macro works with any number of authors. There are two commands
-% used to separate the names and addresses of multiple authors: \And and \AND.
-%
-% Using \And between authors leaves it to LaTeX to determine where to break the
-% lines. Using \AND forces a line break at that point. So, if LaTeX puts 3 of 4
-% authors names on the first line, and the last on the second line, try using
-% \AND instead of \And before the third author name.
 
 \author{
     Victor Constantinescu \quad Cristian Cordoș \quad Matei Neaga \\
@@ -80,23 +45,20 @@
     \texttt{matei.neaga@stud.mec.upb.ro}
 }
 
-
 \begin{document}
 
-
 \maketitle
-
 
 \begin{abstract}
 We investigate industrial anomaly detection for automotive inspection using the AutoVI dataset. We implement PatchCore with coreset subsampling and evaluate centralized and federated setups under non‑IID client splits, including fairness‑aware sampling strategies. To align with trustworthy AI goals, we incorporate differential privacy, robustness via controlled corruptions, and explainability through anomaly heatmaps, Grad‑CAM, and SHAP visualizations. We report image‑ and pixel‑level performance across six categories and extend inference to additional datasets to assess generalization and qualitative behavior.
 
 \end{abstract}
 \tableofcontents
-\newpage % Start content on a new page (optional)
+\newpage
 
 \section{Introduction}
 
-In modern industrial production environments, visual inspection systems play a critical role in ensuring product quality, process reliability, and cost efficiency. In the automotive industry in particular, inspection tasks are characterised by high variability in product appearance, constrained acquisition conditions (e.g., lighting changes, moving parts, limited access), and the need to detect both known and novel anomalies. To address these challenges, robust data-driven methods—including unsupervised and semi-supervised anomaly detection—are increasingly being adopted.  
+In modern industrial production environments, visual inspection systems play a critical role in ensuring product quality, process reliability, and cost efficiency. In the automotive industry in particular, inspection tasks are characterised by high variability in product appearance, constrained acquisition conditions (e.g., lighting changes, moving parts, limited access), and the need to detect both known and novel anomalies. To address these challenges, robust data-driven methods—including unsupervised and semi-supervised anomaly detection—are increasingly being adopted.
 
 The AutoVI dataset, developed jointly by Renault Group, OPMobility, Continental, and Université de technologie de Compiègne, provides a genuine industrial-scale benchmark for anomaly detection in automotive production lines. The images were acquired under realistic production-line conditions—with varying illumination, constant component motion, and genuine product variability—making the dataset especially relevant for evaluating algorithms intended for deployment in factory settings.
 
@@ -128,13 +90,13 @@ The core principle of PatchCore involves improving upon these predecessors by em
 \subsection{Preprocessing Pipeline}
 The data is hosted on Zenodo, which is  free, open-access research data repository created by CERN and supported by the European Commission. Its purpose is to let researchers upload, preserve, and share all kinds of research outputs — not just papers, but datasets, code, software releases, posters, presentations, images, videos, notebooks, even entire project snapshots.
 \\
-The dataset is described in a croissant file provided by Renault. For each of the six categories the croissant metadata pointo to a zip file hosted on Zenodo. We have used the exact structure provided by Renault and the only preprocessing that we did was to unzip the archives. 
+The dataset is described in a croissant file provided by Renault. For each of the six categories the croissant metadata pointo to a zip file hosted on Zenodo. We have used the exact structure provided by Renault and the only preprocessing that we did was to unzip the archives.
 \\
 The dataset is structured per category as follows:
 \begin{itemize}
 	\item \textbf{train}: the train folder contains only "good" images for each category
 	\item \textbf{test}: the test folder contains one subdirectory per defect type (e.g. missing, contamination, etc) plus a good folder
-	\item \textbf{ground\_truth}: for every anomalous test image, pixel annotations are stored at ground\_truth/<defect-name>/<image-stem>/0000.png 
+	\item \textbf{ground\_truth}: for every anomalous test image, pixel annotations are stored at ground\_truth/<defect-name>/<image-stem>/0000.png
 	\item \textbf{defects\_config.json}: metadata about defect types.
 	\item \textbf{defect\_example.png}: visualization of defects
 \end{itemize}
@@ -164,7 +126,6 @@ For model training only good examples of parts are provided. The table below sho
     \label{tab:train_images_categories}
 \end{table}
 
-
 The testing dataset provides images of good and defective parts split by category. The figure below shows an example of a good engine wiring part vs an obstructed engine wiring part.
 \\
 \begin{figure}[htbp]
@@ -172,13 +133,13 @@ The testing dataset provides images of good and defective parts split by categor
 
 \begin{minipage}{0.48\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{good-engine-wiring-0000.png}
+    \includegraphics[width=\textwidth]{figures/good-engine-wiring-0000.png}
     \caption*{Good sample}
 \end{minipage}
 \hfill
 \begin{minipage}{0.48\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{defect-engine-wiring-obstruction-0000.png}
+    \includegraphics[width=\textwidth]{figures/defect-engine-wiring-obstruction-0000.png}
     \caption*{Defect sample}
 \end{minipage}
 
@@ -230,10 +191,10 @@ We also show below a split of the whole test dataset based on defect type:
     \label{tab:defects_test_split}
 \end{table}
 
-In addition to the AutoVI dataset presented previously, we also evaluate our approach on three additional industrial visual inspection datasets: \textit{XFK3}, \textit{Pompe}, and \textit{Radiateur}.  
+In addition to the AutoVI dataset presented previously, we also evaluate our approach on three additional industrial visual inspection datasets: \textit{XFK3}, \textit{Pompe}, and \textit{Radiateur}.
 These datasets follow a binary inspection paradigm, where parts are labeled as \textbf{OK} (non-defective) or \textbf{KO} (defective).
 
-All datasets consist of high-resolution RGB images acquired in controlled industrial environments.  
+All datasets consist of high-resolution RGB images acquired in controlled industrial environments.
 Training is performed primarily on OK samples, while KO samples are used for evaluation, in line with the anomaly detection setting.
 
 \subsection{XFK3 Dataset}
@@ -272,7 +233,7 @@ Figure~\ref{fig:xfk3_example} illustrates an example from the XFK3 dataset toget
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.9\textwidth]{xfk3_explainability_example.png}
+    \includegraphics[width=0.9\textwidth]{figures/xfk3_explainability_example.png}
     \caption{Example XFK3 sample}
     \label{fig:xfk3_example}
 \end{figure}
@@ -321,7 +282,7 @@ Figure~\ref{fig:pompe_defect} presents a representative defective sample from th
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.75\textwidth]{pompe_defect_example.png}
+    \includegraphics[width=0.75\textwidth]{figures/pompe_defect_example.png}
     \caption{Example of a defective sample from the Pompe dataset.}
     \label{fig:pompe_defect}
 \end{figure}
@@ -370,12 +331,11 @@ Figure~\ref{fig:radiateur_example} shows a Radiateur sample together with its pr
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.9\textwidth]{radiateur_explainability_example.png}
+    \includegraphics[width=0.9\textwidth]{figures/radiateur_explainability_example.png}
     \caption{Example Radiateur sample}
     \label{fig:radiateur_example}
 \end{figure}
 \FloatBarrier
-
 
 \section{Baseline Model Architecture}
 
@@ -389,9 +349,9 @@ The key components of our PatchCore implementation are:
 
 \begin{itemize}
     \item \textbf{Feature Extraction}: We use a pre-trained Wide ResNet-50 backbone to extract multi-scale features at intermediate layers (specifically layers 2 and 3). These features capture both low-level textures and high-level semantic information.
-    
+
     \item \textbf{Memory Bank Construction}: From the extracted training features, we construct a compact memory bank using coreset subsampling. This reduces the computational burden while maintaining representative coverage of the normal feature space.
-    
+
     \item \textbf{Anomaly Scoring}: At test time, for each patch in the input image, we compute its distance to the nearest neighbor in the memory bank. High distances indicate anomalous regions.
 \end{itemize}
 
@@ -456,13 +416,13 @@ Next we employ K-center coreset sampling, which greedily selects the most divers
       \caption{Centralized PatchCore performance with kcenter coreset on AutoVI dataset. AUROC = Area Under ROC Curve, AP = Average Precision.}
       \label{tab:centralized_results}
   \end{table}
-  
+
 On average, using kcenter coreset sampling improves Image AUROC (+0.095) and Image AP (+0.075), while Pixel AUROC is essentially flat ($-0.003$) and Pixel AP improves (+0.070). The biggest gains are in the underbody categories (both image- and pixel-level metrics jump notably), while pipe\_staple's image AUROC drops relative to the previous ablation. Overall, the updated results shift toward stronger image-level discrimination without a clear change in pixel AUROC.
 
 In the figures below we can observe the difference is a visual manner.
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\textwidth]{comparison-central-random-kcenter.png}
+    \includegraphics[width=\textwidth]{figures/comparison-central-random-kcenter.png}
     \caption{Comprehensive performance comparison showing: (top-left) image-level AUROC, (top-right) pixel-level AUROC, (bottom-left) performance degradation heatmap, (bottom-right) average metrics across all categories.}
     \label{fig:comparisoncrk002}
 \end{figure}
@@ -470,13 +430,11 @@ In the figures below we can observe the difference is a visual manner.
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\textwidth]{comparison-central-random-kcenter-detailed.png}
+    \includegraphics[width=\textwidth]{figures/comparison-central-random-kcenter-detailed.png}
     \caption{Detailed per-category comparison of all four evaluation metrics (Image AUROC, Pixel AUROC, Image AP, Pixel AP) between centralized and federated approaches.}
     \label{fig:detailed_comparisoncrk002}
 \end{figure}
 \FloatBarrier
-
-
 
 \section{Federated Setup}
 
@@ -488,7 +446,7 @@ Our federated implementation consists of:
 
 \begin{itemize}
     \item \textbf{Server}: Coordinates the federated training process, aggregates memory banks from clients, and distributes the global model. The server uses a custom FedAvg strategy adapted for memory bank aggregation rather than traditional model parameter averaging.
-    
+
     \item \textbf{Clients}: Each client represents a production facility with access to training data for a subset of categories. Clients extract features locally, build category-specific memory banks, and share these with the server.
 \end{itemize}
 
@@ -538,17 +496,14 @@ In order to progress this we implemented a number of enhancements:
 	\\
 \begin{adjustbox}{max width=\textwidth, max height=0.32\textheight, keepaspectratio, center}
     \begin{sequencediagram}
-      % 1. Set font to 4.5pt (Smaller than \tiny)
+
       \tikzstyle{every node}=[font=\fontsize{8.5}{9}\selectfont]
 
-      % 2. Redefine the header boxes (Client/Server) to be smaller to match the font
       \tikzstyle{inststyle}+=[minimum height=0.6cm, minimum width=3.5cm, font=\fontsize{8}{9}\selectfont]
 
-      % 3. Threads (Only Client and Server)
       \newthread{client}{Client}
       \newthread{server}{Server}
 
-      % 4. Sequence Logic (Removed trainer)
       \begin{callself}{client}{fit(category) x N}{memory\_banks, patch\_shapes}
       \end{callself}
 
@@ -571,14 +526,14 @@ In order to progress this we implemented a number of enhancements:
   \end{adjustbox}
 
 	\item As aggregation strategy we now concatenate and applies k-center greedy coreset selection with configurable maximum server samples and chunk sizes.
-	\item We implemented deterministic train splits 
+	\item We implemented deterministic train splits
 \end{itemize}
 
 The two figures below visualize the comparisons between the federated implementation versus the baseline centralized training loop, all using kcenter for coreset sampling.
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\textwidth]{comparison002.png}
+    \includegraphics[width=\textwidth]{figures/comparison002.png}
     \caption{Comprehensive performance comparison showing: (top-left) image-level AUROC, (top-right) pixel-level AUROC, (bottom-left) performance degradation heatmap, (bottom-right) average metrics across all categories.}
     \label{fig:comparison002}
 \end{figure}
@@ -586,7 +541,7 @@ The two figures below visualize the comparisons between the federated implementa
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\textwidth]{detailed-comparison002.png}
+    \includegraphics[width=\textwidth]{figures/detailed-comparison002.png}
     \caption{Detailed per-category comparison of all four evaluation metrics (Image AUROC, Pixel AUROC, Image AP, Pixel AP) between centralized and federated approaches.}
     \label{fig:detailed_comparison002}
 \end{figure}
@@ -610,7 +565,7 @@ Introducing differental privacy decreases our scores almost to the level of cent
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\textwidth]{comparison003.png}
+    \includegraphics[width=\textwidth]{figures/comparison003.png}
     \caption{Comprehensive performance comparison showing: (top-left) image-level AUROC, (top-right) pixel-level AUROC, (bottom-left) performance degradation heatmap, (bottom-right) average metrics across all categories.}
     \label{fig:comparison003}
 \end{figure}
@@ -618,7 +573,7 @@ Introducing differental privacy decreases our scores almost to the level of cent
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\textwidth]{detailed-comparison003.png}
+    \includegraphics[width=\textwidth]{figures/detailed-comparison003.png}
     \caption{Detailed per-category comparison of all four evaluation metrics (Image AUROC, Pixel AUROC, Image AP, Pixel AP) between centralized and federated approaches.}
     \label{fig:detailed_comparison003}
 \end{figure}
@@ -627,7 +582,7 @@ Introducing differental privacy decreases our scores almost to the level of cent
 \subsubsection{Renyi Differential Privacy}
 Introduced by \citep{Mironov_2017} Rényi Differential Privacy (RDP) is a generalization of differential privacy that provides a more mathematically tractable way to analyze the composition of private mechanisms, particularly for iterative algorithms.
  \\
-A randomized mechanism $\mathcal{M}$ satisfies $(\alpha, \epsilon)$-RDP if for any two adjacent datasets $D, D'$ (differing in a single element), the Rényi divergence of order $\alpha$ between their output distributions is bounded by 
+A randomized mechanism $\mathcal{M}$ satisfies $(\alpha, \epsilon)$-RDP if for any two adjacent datasets $D, D'$ (differing in a single element), the Rényi divergence of order $\alpha$ between their output distributions is bounded by
       $\epsilon$:
    \begin{equation}
    D_\alpha(\mathcal{M}(D) || \mathcal{M}(D')) \le \epsilon
@@ -646,7 +601,7 @@ where the Rényi divergence of order $\alpha > 1$ between distributions $P$ and 
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\textwidth]{comparison004.png}
+    \includegraphics[width=\textwidth]{figures/comparison004.png}
     \caption{Comprehensive performance comparison showing: (top-left) image-level AUROC, (top-right) pixel-level AUROC, (bottom-left) performance degradation heatmap, (bottom-right) average metrics across all categories.}
     \label{fig:comparison004}
 \end{figure}
@@ -654,19 +609,19 @@ where the Rényi divergence of order $\alpha > 1$ between distributions $P$ and 
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\textwidth]{detailed-comparison004.png}
+    \includegraphics[width=\textwidth]{figures/detailed-comparison004.png}
     \caption{Detailed per-category comparison of all four evaluation metrics (Image AUROC, Pixel AUROC, Image AP, Pixel AP) between centralized and federated approaches.}
     \label{fig:detailed_comparison004}
 \end{figure}
 \FloatBarrier
 
-The results indicate a scenario with strong privacy guarantees but significantly degraded utility (anomaly detection performance).  
+The results indicate a scenario with strong privacy guarantees but significantly degraded utility (anomaly detection performance).
 The use of Differential Privacy (DP) with a high noise level has severely impacted the model's ability to distinguish between normal and anomalous images in most categories.
 
-Privacy analysis 
+Privacy analysis
 \begin{itemize}
     \item Privacy Budget ($\varepsilon$): $\approx 1.45$ (at $\delta = 10^{-5}$).\\
-    \hspace*{1.5em}This is a tight/strong privacy budget. Values below 2.0 are generally considered excellent for sensitive data. 
+    \hspace*{1.5em}This is a tight/strong privacy budget. Values below 2.0 are generally considered excellent for sensitive data.
     \item Noise Multiplier ($\sigma$): $\approx 4.84$.\\
     \hspace*{1.5em}This is a very high amount of noise. For context, typical training runs might use $\sigma \approx 1.0$ to $1.5$. A value of nearly 5 means the noise added to the gradients/updates is roughly 5 times the magnitude of the clipped signal itself.
     \item Rényi Order ($\alpha$): $16.0$.\\
@@ -677,39 +632,37 @@ Utility analysis:
 \begin{itemize}
     \item Good performance:
     \begin{itemize}
-        \item Underbody Pipes (Client 3): ROC AUC $\approx 0.79$.  
+        \item Underbody Pipes (Client 3): ROC AUC $\approx 0.79$.
         This category remained relatively robust to the noise, maintaining decent detection capability.
     \end{itemize}
-    
+
     \item Poor performance (near random):
     \begin{itemize}
         \item Engine Wiring (Client 1): ROC AUC $\approx 0.56$.
         \item Pipe Clip (Client 1): ROC AUC $\approx 0.56$.
         \item Pipe Staple (Client 2): ROC AUC $\approx 0.59$.
     \end{itemize}
-    
+
     \item Failure cases (worse than random):
     \begin{itemize}
-        \item Tank Screw (Client 2): ROC AUC $\approx 0.42$.  
+        \item Tank Screw (Client 2): ROC AUC $\approx 0.42$.
         The noise likely overwhelmed the subtle features of this category, flipping the decision boundary (a score $<0.5$ suggests the model is effectively inverted or confused).
         \item Underbody Screw (Client 3): ROC AUC $\approx 0.51$.
     \end{itemize}
 \end{itemize}
 
-Conclusion:  
+Conclusion:
 The experiment prioritized privacy over utility. The high noise ($\sigma \approx 4.84$) ensured the epsilon remained low ($\approx 1.45$) despite the composition of mechanisms, but it rendered the model ineffective for finer‑grained anomalies (screws, wiring).
-
 
 \subsection{Fairness}
 
 To address potential bias in federated learning scenarios where clients possess imbalanced data distributions, we introduce \textbf{fairness-aware coreset selection}. Traditional k-Center greedy algorithms applied globally can under-represent minority subgroups (e.g., rare defect types or products with fewer training samples), leading to degraded performance on these critical categories.
 
-
 \subsubsection{Fairness-Aware Coreset Selection Algorithm}
 
 The fairness-aware coreset selection algorithm operates in several key stages to ensure equitable representation of all data subgroups:
 
-\paragraph{Input Requirements} 
+\paragraph{Input Requirements}
 
 The algorithm requires four inputs:
 \begin{itemize}
@@ -719,7 +672,7 @@ The algorithm requires four inputs:
     \item A fairness mode selection: none, proportional, or equal
 \end{itemize}
 
-\paragraph{Algorithm Steps} 
+\paragraph{Algorithm Steps}
 
 \textbf{Step 1: Subgroup Detection}
 
@@ -766,7 +719,7 @@ The algorithm outputs the coreset $\mathcal{C}$ together with allocation metadat
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\textwidth]{comparison005.png}
+    \includegraphics[width=\textwidth]{figures/comparison005.png}
     \caption{Comprehensive performance comparison showing: (top-left) image-level AUROC, (top-right) pixel-level AUROC, (bottom-left) performance degradation heatmap, (bottom-right) average metrics across all categories.}
     \label{fig:comparison005}
 \end{figure}
@@ -774,7 +727,7 @@ The algorithm outputs the coreset $\mathcal{C}$ together with allocation metadat
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\textwidth]{detailed-comparison005.png}
+    \includegraphics[width=\textwidth]{figures/detailed-comparison005.png}
     \caption{Detailed per-category comparison of all four evaluation metrics (Image AUROC, Pixel AUROC, Image AP, Pixel AP) between centralized and federated approaches.}
     \label{fig:detailed_comparison005}
 \end{figure}
@@ -797,20 +750,19 @@ We implement the following enhancements for interpretability:
 	\item JSON metadata saved alongside images with patch shape and filenames.
 \end{itemize}
 
-% Interpretability visualization snapshot
 \begin{figure*}[t]
 \centering
 \setlength{\tabcolsep}{2pt}
 \begin{tabular}{c c c c}
  & \textbf{Anomaly} & \textbf{Grad-CAM} & \textbf{SHAP} \\
 \texttt{engine\_wiring} &
-\includegraphics[width=0.26\textwidth]{interpretability/engine_wiring_0003_anomaly.png} &
-\includegraphics[width=0.26\textwidth]{interpretability/engine_wiring_0003_gradcam.png} &
-\includegraphics[width=0.26\textwidth]{interpretability/engine_wiring_0003_shap.png} \\
+\includegraphics[width=0.26\textwidth]{figures/engine_wiring_0003_anomaly.png} &
+\includegraphics[width=0.26\textwidth]{figures/engine_wiring_0003_gradcam.png} &
+\includegraphics[width=0.26\textwidth]{figures/engine_wiring_0003_shap.png} \\
 \texttt{pipe\_clip} &
-\includegraphics[width=0.26\textwidth]{interpretability/pipe_clip_0003_anomaly.png} &
-\includegraphics[width=0.26\textwidth]{interpretability/pipe_clip_0003_gradcam.png} &
-\includegraphics[width=0.26\textwidth]{interpretability/pipe_clip_0003_shap.png} \\
+\includegraphics[width=0.26\textwidth]{figures/pipe_clip_0003_anomaly.png} &
+\includegraphics[width=0.26\textwidth]{figures/pipe_clip_0003_gradcam.png} &
+\includegraphics[width=0.26\textwidth]{figures/pipe_clip_0003_shap.png} \\
 \end{tabular}
 \caption{Interpretability views for two categories. Anomaly heatmaps show patch-distance scores, Grad-CAM highlights salient features, and SHAP shows patch attributions for the anomaly score.}
 \label{fig:interpretability-kcenter}
@@ -820,10 +772,10 @@ We implement the following enhancements for interpretability:
 \subsection{Robustness}
 
  We implemented robustness by injecting controlled corruptions and Gaussian noise during training, then hardening the feature bank and scoring pipeline with norm/cosine filters and optional score clipping. On the federated side, uploads are chunked and audited with norm/cosine sanity checks and outlier handling, and aggregation can be made robust via median/trimmed‑mean client filtering. These options are exposed as CLI flags so we can sweep low/medium/high noise regimes and compare how performance degrades or stabilizes under corruption.
- 
+
  \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\textwidth]{comparison006.png}
+    \includegraphics[width=\textwidth]{figures/comparison006.png}
     \caption{Comprehensive performance comparison showing: (top-left) image-level AUROC, (top-right) pixel-level AUROC, (bottom-left) performance degradation heatmap, (bottom-right) average metrics across all categories.}
     \label{fig:comparison006}
 \end{figure}
@@ -831,14 +783,14 @@ We implement the following enhancements for interpretability:
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\textwidth]{detailed-comparison006.png}
+    \includegraphics[width=\textwidth]{figures/detailed-comparison006.png}
     \caption{Detailed per-category comparison of all four evaluation metrics (Image AUROC, Pixel AUROC, Image AP, Pixel AP) between centralized and federated approaches.}
     \label{fig:detailed_comparison006}
 \end{figure}
 
 \section{Experimental Results on Additional Datasets}
 
-In this section, we present the experimental results obtained on the three additional industrial datasets introduced previously: \textit{XFK3}, \textit{Pompe}, and \textit{Radiateur}.  
+In this section, we present the experimental results obtained on the three additional industrial datasets introduced previously: \textit{XFK3}, \textit{Pompe}, and \textit{Radiateur}.
 All experiments follow the same anomaly detection protocol, using PatchCore with a k-center coreset strategy in a federated sequential setup.
 
 Since these datasets do not provide pixel-level segmentation masks for defective regions, evaluation is primarily conducted at the \textbf{image level}. Pixel-level metrics are reported for completeness but are not considered meaningful in this context.
@@ -879,7 +831,7 @@ These results indicate that the learned representation captures the nominal appe
 
 \subsection{Pompe Results}
 
-The Pompe dataset presents a more balanced yet still realistic distribution of OK and KO samples.  
+The Pompe dataset presents a more balanced yet still realistic distribution of OK and KO samples.
 The model achieves strong image-level performance, demonstrating robustness to variations in defect appearance.
 
 \begin{table}[htbp]
@@ -937,7 +889,7 @@ The NaN values observed for pixel-level ROC AUC are expected and stem from the l
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\textwidth]{extra-comparison.png}
+    \includegraphics[width=\textwidth]{figures/extra-comparison.png}
     \caption{Comparison for image level scores across the 3 categories}
     \label{fig:extra-comparison}
 \end{figure}
@@ -949,7 +901,7 @@ We presented an industrial anomaly detection pipeline built on PatchCore and eva
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\textwidth]{fullcomparison.png}
+    \includegraphics[width=\textwidth]{figures/fullcomparison.png}
     \caption{Comparison for AUROC image level scores for all ablations}
     \label{fig:extra-comparison}
 \end{figure}
@@ -973,14 +925,14 @@ The repository is organized as follows:
         \item \texttt{scripts\_dp\_fairness/}: Experimental scripts for differential privacy and fairness-aware coreset selection
         \item \texttt{scripts\_no\_dp\_fairness/}: Baseline experimental scripts
     \end{itemize}
-    
+
     \item[\texttt{results/}] Experimental results and artifacts from different runs:
     \begin{itemize}
         \item Timestamped directories containing client metrics, server outputs, and logs
         \item Supports both centralized and federated configurations with various privacy settings (DP, fairness)
         \item Includes robustness testing results with different corruption levels
     \end{itemize}
-    
+
     \item[\texttt{paper/}] LaTeX source code for the research paper:
     \begin{itemize}
         \item \texttt{report-1.tex}: Main paper document
@@ -988,7 +940,7 @@ The repository is organized as follows:
         \item \texttt{references.bib}: Bibliography entries
         \item \texttt{interpretability/}: Visualization outputs (Grad-CAM, SHAP, anomaly overlays)
     \end{itemize}
-    
+
     \item[\texttt{docs/}] Documentation:
     \begin{itemize}
         \item \texttt{federated\_guide.md}: Comprehensive guide for running federated experiments
@@ -1001,9 +953,9 @@ The repository is organized as follows:
 
 \begin{description}
     \item[\texttt{requirements.txt}] Python package dependencies (flwr, torch, torchvision, scikit-learn, etc.)
-    
+
     \item[\texttt{start-server.sh}, \texttt{start-client-*.sh}] Bash scripts for launching federated learning experiments
-    
+
     \item[\texttt{start-centralized.sh}] Script for running centralized training baseline
 \end{description}
 
@@ -1024,7 +976,7 @@ To run centralized baseline:
 
 To run federated experiments, start the server first, then launch multiple clients. Refer to \texttt{docs/federated\_guide.md} for detailed configuration options including differential privacy and fairness-aware coreset selection.
 
-\bibliographystyle{plainnat}  % Choose a bibliography style (plainnat, ieee, etc.)
-\bibliography{references}  % Load the .bib file (without the .bib extension)
+\bibliographystyle{plainnat}
+\bibliography{references}
 
 \end{document}
