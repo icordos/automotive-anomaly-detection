@@ -788,6 +788,76 @@ We implement the following enhancements for interpretability:
     \label{fig:detailed_comparison006}
 \end{figure}
 
+\section{Ablation study}
+
+\begin{table*}[htbp]
+\centering
+\adjustbox{max width=\textwidth}{%
+\begin{tabular}{l cccccc c}
+\toprule
+\textbf{Ablation}
+  & \textbf{eng\_wiring}
+  & \textbf{pipe\_clip}
+  & \textbf{pipe\_staple}
+  & \textbf{tank\_screw}
+  & \textbf{und\_pipes}
+  & \textbf{und\_screw}
+  & \textbf{Avg} \\
+\midrule
+CenRandom        & 0.55 & 0.51 & 0.59 & 0.47 & 0.83 & 0.61 & 0.59 \\
+CenK-Center      & 0.66 & 0.52 & 0.47 & 0.57 & 0.95 & 0.95 & 0.69 \\
+FedStage1        & ---  & ---  & ---  & ---  & ---  & ---  & 0.16 \\
+FedRandom        & ---  & ---  & ---  & ---  & ---  & ---  & 0.64 \\
+FedK-Center      & 0.73 & 0.59 & 0.51 & 0.62 & 1.00 & 0.99 & 0.74 \\
+FedKC+DP         & 0.55 & 0.50 & 0.50 & 0.45 & 0.80 & 0.60 & 0.58 \\
+FedKC+RDP        & 0.56 & 0.56 & 0.59 & 0.42 & 0.79 & 0.51 & 0.57 \\
+Fairness         & 0.61 & 0.54 & 0.52 & 0.46 & 0.97 & 0.65 & 0.62 \\
+FedKC+LowNoise   & 0.73 & 0.55 & 0.54 & 0.53 & 1.00 & 0.98 & 0.72 \\
+FedKC+MedNoise   & 0.74 & 0.57 & 0.50 & 0.51 & 0.99 & 0.97 & 0.71 \\
+FedKC+HiNoise    & 0.75 & 0.56 & 0.50 & 0.50 & 0.99 & 0.93 & 0.70 \\
+FedKC+RDP+Med    & ---  & ---  & ---  & ---  & ---  & ---  & 0.59 \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Image-level ROC AUC across all ablations.}
+\label{tab:full_ablation_auroc}
+\end{table*}
+
+\begin{table*}[htbp]
+\centering
+\adjustbox{max width=\textwidth}{%
+\begin{tabular}{l cccccc c}
+\toprule
+\textbf{Ablation}
+  & \textbf{eng\_wiring}
+  & \textbf{pipe\_clip}
+  & \textbf{pipe\_staple}
+  & \textbf{tank\_screw}
+  & \textbf{und\_pipes}
+  & \textbf{und\_screw}
+  & \textbf{Avg} \\
+\midrule
+CenRandom        & 0.86 & 0.81 & 0.79 & 0.82 & 0.88 & 0.99 & 0.86 \\
+CenK-Center      & 0.84 & 0.82 & 0.83 & 0.78 & 0.86 & 0.99 & 0.85 \\
+FedStage1        & ---  & ---  & ---  & ---  & ---  & ---  & ---  \\
+FedRandom        & ---  & ---  & ---  & ---  & ---  & ---  & ---  \\
+FedK-Center      & 0.85 & 0.83 & 0.82 & 0.82 & 0.88 & 1.00 & 0.87 \\
+FedKC+DP         & 0.65 & 0.62 & 0.52 & 0.62 & 0.64 & 0.85 & 0.65 \\
+FedKC+RDP        & 0.67 & 0.57 & 0.54 & 0.50 & 0.65 & 0.85 & 0.63 \\
+Fairness         & 0.86 & 0.81 & 0.80 & 0.82 & 0.88 & 0.98 & 0.86 \\
+FedKC+LowNoise   & 0.81 & 0.74 & 0.80 & 0.80 & 0.93 & 1.00 & 0.85 \\
+FedKC+MedNoise   & 0.81 & 0.72 & 0.79 & 0.77 & 0.93 & 1.00 & 0.84 \\
+FedKC+HiNoise    & 0.79 & 0.67 & 0.73 & 0.73 & 0.91 & 1.00 & 0.81 \\
+FedKC+RDP+Med    & ---  & ---  & ---  & ---  & ---  & ---  & ---  \\
+\bottomrule
+\end{tabular}%
+}
+\caption{Pixel-level ROC AUC across all ablations.}
+\label{tab:full_ablation_pixel_auroc}
+\end{table*}
+
+\FloatBarrier
+
 \section{Experimental Results on Additional Datasets}
 
 In this section, we present the experimental results obtained on the three additional industrial datasets introduced previously: \textit{XFK3}, \textit{Pompe}, and \textit{Radiateur}.
