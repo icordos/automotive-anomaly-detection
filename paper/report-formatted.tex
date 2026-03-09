@@ -370,7 +370,7 @@ For each of the six AutoVI categories, we train a separate PatchCore model, as e
 
 \subsection{Centralized Learning Results}
 
-We first establish baseline performance by training PatchCore models in a centralized manner, where all training data for each category is available to a single model. Table \ref{tab:centralized_results} presents the performance metrics across all six categories using random coreset sampling.
+We first establish baseline performance by training PatchCore models in a centralized manner, where all training data for each category is available to a single model. Table \ref{tab:centralized_results_random} presents the performance metrics across all six categories using random coreset sampling.
 
 \begin{table}[htbp]
     \centering
@@ -389,7 +389,7 @@ We first establish baseline performance by training PatchCore models in a centra
         \hline
     \end{tabular}
     \caption{Centralized PatchCore with random coreset performance on AutoVI dataset. AUROC = Area Under ROC Curve, AP = Average Precision.}
-    \label{tab:centralized_results}
+    \label{tab:centralized_results_random}
 \end{table}
 
 The centralized models using random sampling achieve strong pixel-level AUROC scores (average 0.857), indicating good localization of defects. Image-level AUROC is more modest (average 0.592), reflecting the challenge of binary classification on this industrial dataset. Notably, underbody\_screw achieves exceptional pixel-level AUROC of 0.988, while underbody\_pipes shows the best image-level performance at 0.829.
