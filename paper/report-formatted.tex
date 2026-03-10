@@ -90,7 +90,7 @@ The core principle of PatchCore involves improving upon these predecessors by em
 \subsection{Preprocessing Pipeline}
 The data is hosted on Zenodo, which is  free, open-access research data repository created by CERN and supported by the European Commission. Its purpose is to let researchers upload, preserve, and share all kinds of research outputs — not just papers, but datasets, code, software releases, posters, presentations, images, videos, notebooks, even entire project snapshots.
 \\
-The dataset is described in a croissant file provided by Renault. For each of the six categories the croissant metadata pointo to a zip file hosted on Zenodo. We have used the exact structure provided by Renault and the only preprocessing that we did was to unzip the archives.
+The dataset is described in a croissant file provided by Renault. For each of the six categories the croissant metadata points to a zip file hosted on Zenodo. We have used the exact structure provided by Renault and the only preprocessing that we did was to unzip the archives.
 \\
 The dataset is structured per category as follows:
 \begin{itemize}
@@ -438,7 +438,7 @@ In the figures below we can observe the difference is a visual manner.
 
 \section{Federated Setup}
 
-To investigate privacy-preserving anomaly detection, we implement a federated learning framework using the Flower library. Our setup simulates a realistic scenario where different production lines or facilities possess data for different product categories.
+To investigate privacy-preserving anomaly detection, we implement a custom federated learning framework. Our setup simulates a realistic scenario where different production lines or facilities possess data for different product categories.
 
 \subsection{Architecture}
 
@@ -488,11 +488,7 @@ Key configuration parameters for the federated setup:
     \item Communication protocol: gRPC via Flower framework
 \end{itemize}
 
-\subsection{Enhanced Federated Learning Implementation}
-
-In order to progress this we implemented a number of enhancements:
-\begin{itemize}
-	\item Implemented a custom federated learning mechanism based on pickle RPC. The initial flower framework had strict synchronous client requirements, which was hard to implement in practice due to hardware availability. Our custom framework allowed asynchronous clients and separate upload and eval modes for clients. In the upload mode the client builds local memory banks and uploads them to the server. Once all clients have completed building their memory banks, the server will concatenate category banks and apply k-center coreset. In the eval mode the clients will download global banks into the trainer and compute the metrics.
+We implement a custom federated learning mechanism based on pickle RPC. We chose this over readily available frameworks like flower due to its strict synchronous client requirements, which was hard to implement in practice due to hardware availability. Our custom framework allowed asynchronous clients and separate upload and eval modes for clients. In the upload mode the client builds local memory banks and uploads them to the server. Once all clients have completed building their memory banks, the server will concatenate category banks and apply k-center coreset. In the eval mode the clients will download global banks into the trainer and compute the metrics.
 	\\
 \begin{adjustbox}{max width=\textwidth, max height=0.32\textheight, keepaspectratio, center}
     \begin{sequencediagram}
@@ -525,9 +521,8 @@ In order to progress this we implemented a number of enhancements:
     \end{sequencediagram}
   \end{adjustbox}
 
-	\item As aggregation strategy we now concatenate and applies k-center greedy coreset selection with configurable maximum server samples and chunk sizes.
-	\item We implemented deterministic train splits
-\end{itemize}
+As aggregation strategy we now concatenate and applies k-center greedy coreset selection with configurable maximum server samples and chunk sizes. We also implemented deterministic train splits.
+
 
 The two figures below visualize the comparisons between the federated implementation versus the baseline centralized training loop, all using kcenter for coreset sampling.
 
