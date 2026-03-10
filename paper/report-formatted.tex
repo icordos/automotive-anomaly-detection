@@ -87,20 +87,6 @@ The core principle of PatchCore involves improving upon these predecessors by em
 
 \section{Data Analysis}
 
-\subsection{Preprocessing Pipeline}
-The data is hosted on Zenodo, which is  free, open-access research data repository created by CERN and supported by the European Commission. Its purpose is to let researchers upload, preserve, and share all kinds of research outputs — not just papers, but datasets, code, software releases, posters, presentations, images, videos, notebooks, even entire project snapshots.
-\\
-The dataset is described in a croissant file provided by Renault. For each of the six categories the croissant metadata points to a zip file hosted on Zenodo. We have used the exact structure provided by Renault and the only preprocessing that we did was to unzip the archives.
-\\
-The dataset is structured per category as follows:
-\begin{itemize}
-	\item \textbf{train}: the train folder contains only "good" images for each category
-	\item \textbf{test}: the test folder contains one subdirectory per defect type (e.g. missing, contamination, etc) plus a good folder
-	\item \textbf{ground\_truth}: for every anomalous test image, pixel annotations are stored at ground\_truth/<defect-name>/<image-stem>/0000.png
-	\item \textbf{defects\_config.json}: metadata about defect types.
-	\item \textbf{defect\_example.png}: visualization of defects
-\end{itemize}
-
 \subsection{AutoVI Dataset}
 
 There are six categories of car parts over which we are operating - engine wiring, pipe clips, pipe staples, tank screws, underbody pipes and underbody screws.
@@ -1040,6 +1026,21 @@ To run centralized baseline:
 \end{verbatim}
 
 To run federated experiments, start the server first, then launch multiple clients. Refer to \texttt{docs/federated\_guide.md} for detailed configuration options including differential privacy and fairness-aware coreset selection.
+
+\section{Preprocessing Pipeline}
+The data is hosted on Zenodo, which is  free, open-access research data repository created by CERN and supported by the European Commission. Its purpose is to let researchers upload, preserve, and share all kinds of research outputs — not just papers, but datasets, code, software releases, posters, presentations, images, videos, notebooks, even entire project snapshots.
+\\
+The dataset is described in a croissant file provided by Renault. For each of the six categories the croissant metadata points to a zip file hosted on Zenodo. We have used the exact structure provided by Renault and the only preprocessing that we did was to unzip the archives.
+\\
+The dataset is structured per category as follows:
+\begin{itemize}
+	\item \textbf{train}: the train folder contains only "good" images for each category
+	\item \textbf{test}: the test folder contains one subdirectory per defect type (e.g. missing, contamination, etc) plus a good folder
+	\item \textbf{ground\_truth}: for every anomalous test image, pixel annotations are stored at ground\_truth/<defect-name>/<image-stem>/0000.png
+	\item \textbf{defects\_config.json}: metadata about defect types.
+	\item \textbf{defect\_example.png}: visualization of defects
+\end{itemize}
+
 
 \bibliographystyle{plainnat}
 \bibliography{references}
