@@ -38,11 +38,12 @@
 \title{Industrial Anomaly Detection}
 
 \author{
-    Victor Constantinescu \quad Cristian Cordoș \quad Matei Neaga \\
+    Cristian Cordoș \quad Victor Constantinescu \quad  Matei Neaga \quad Irina Mocanu \\
     National University of Science and Technology POLITEHNICA Bucharest, Romania \\
-    \texttt{vconstantinescu2710@stud.acs.upb.ro} \\
     \texttt{ioan.cordos@stud.acs.upb.ro} \\
-    \texttt{matei.neaga@stud.mec.upb.ro}
+    \texttt{vconstantinescu2710@stud.acs.upb.ro} \\
+    \texttt{matei.neaga@stud.mec.upb.ro} \\
+    \texttt{irina.mocanu@upb.ro}
 }
 
 \begin{document}
@@ -787,8 +788,7 @@ We implement the following enhancements for interpretability:
 \midrule
 CenRandom        & 0.55 & 0.51 & 0.59 & 0.47 & 0.83 & 0.61 & 0.59 \\
 CenK-Center      & 0.66 & 0.52 & 0.47 & 0.57 & 0.95 & 0.95 & 0.69 \\
-FedStage1        & ---  & ---  & ---  & ---  & ---  & ---  & 0.16 \\
-FedRandom        & ---  & ---  & ---  & ---  & ---  & ---  & 0.64 \\
+FedRandom        & 0.63  & 0.53  & 0.61  & 0.44  & 0.97  & 0.64  & 0.64 \\
 FedK-Center      & 0.73 & 0.59 & 0.51 & 0.62 & 1.00 & 0.99 & 0.74 \\
 FedKC+DP         & 0.55 & 0.50 & 0.50 & 0.45 & 0.80 & 0.60 & 0.58 \\
 FedKC+RDP        & 0.56 & 0.56 & 0.59 & 0.42 & 0.79 & 0.51 & 0.57 \\
@@ -796,7 +796,7 @@ Fairness         & 0.61 & 0.54 & 0.52 & 0.46 & 0.97 & 0.65 & 0.62 \\
 FedKC+LowNoise   & 0.73 & 0.55 & 0.54 & 0.53 & 1.00 & 0.98 & 0.72 \\
 FedKC+MedNoise   & 0.74 & 0.57 & 0.50 & 0.51 & 0.99 & 0.97 & 0.71 \\
 FedKC+HiNoise    & 0.75 & 0.56 & 0.50 & 0.50 & 0.99 & 0.93 & 0.70 \\
-FedKC+RDP+Med    & ---  & ---  & ---  & ---  & ---  & ---  & 0.59 \\
+FedKC+RDP+Med    & 0.55  & 0.50  & 0.61  & 0.41  & 0.75  & 0.72  & 0.59 \\
 \bottomrule
 \end{tabular}%
 }
@@ -820,8 +820,7 @@ FedKC+RDP+Med    & ---  & ---  & ---  & ---  & ---  & ---  & 0.59 \\
 \midrule
 CenRandom        & 0.86 & 0.81 & 0.79 & 0.82 & 0.88 & 0.99 & 0.86 \\
 CenK-Center      & 0.84 & 0.82 & 0.83 & 0.78 & 0.86 & 0.99 & 0.85 \\
-FedStage1        & ---  & ---  & ---  & ---  & ---  & ---  & ---  \\
-FedRandom        & ---  & ---  & ---  & ---  & ---  & ---  & ---  \\
+FedRandom        & 0.86  & 0.81  & 0.86  & 0.82  & 0.87  & 0.98  & 0.85  \\
 FedK-Center      & 0.85 & 0.83 & 0.82 & 0.82 & 0.88 & 1.00 & 0.87 \\
 FedKC+DP         & 0.65 & 0.62 & 0.52 & 0.62 & 0.64 & 0.85 & 0.65 \\
 FedKC+RDP        & 0.67 & 0.57 & 0.54 & 0.50 & 0.65 & 0.85 & 0.63 \\
@@ -829,7 +828,7 @@ Fairness         & 0.86 & 0.81 & 0.80 & 0.82 & 0.88 & 0.98 & 0.86 \\
 FedKC+LowNoise   & 0.81 & 0.74 & 0.80 & 0.80 & 0.93 & 1.00 & 0.85 \\
 FedKC+MedNoise   & 0.81 & 0.72 & 0.79 & 0.77 & 0.93 & 1.00 & 0.84 \\
 FedKC+HiNoise    & 0.79 & 0.67 & 0.73 & 0.73 & 0.91 & 1.00 & 0.81 \\
-FedKC+RDP+Med    & ---  & ---  & ---  & ---  & ---  & ---  & ---  \\
+FedKC+RDP+Med    & 0.59  & 0.54  & 0.44  & 0.60  & 0.71  & 0.83  & 0.61  \\
 \bottomrule
 \end{tabular}%
 }
