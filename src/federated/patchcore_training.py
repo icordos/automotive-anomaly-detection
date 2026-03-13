@@ -25,6 +25,7 @@ from torchvision.models import Wide_ResNet50_2_Weights, wide_resnet50_2
 from torchvision.models.feature_extraction import create_feature_extractor
 from torchvision.transforms import InterpolationMode
 from tqdm import tqdm
+import csv
 
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
@@ -415,7 +416,7 @@ class PatchCoreTrainer:
             mask_transform=self.mask_transform,
             train_partition_id=self.config.train_partition_id,
             train_num_partitions=self.config.train_num_partitions,
-            return_path=split == "test" and self.config.save_interpretability,
+            return_path=split == "test",
             seg_masks=self.config.seg_masks,
         )
         return DataLoader(
@@ -910,21 +911,20 @@ class PatchCoreTrainer:
         image_labels: List[int] = []
         pixel_scores: List[float] = []
         pixel_labels: List[int] = []
+        image_paths_list: List[str] = []
 
         saliency_saved = 0
         shap_samples: List[Dict[str, object]] = []
 
         for i, batch in enumerate(tqdm(loader, desc=f"Evaluating {category}")):
-            if self.config.save_interpretability:
-                images, labels, masks, paths = batch
-            else:
-                images, labels, masks = batch
+            images, labels, masks, paths = batch
             images = images.to(self.model.device)
             feats = self.model.extract(images)
             embeddings, patch_shape = self.model.aggregate(feats)
             anomaly_scores, anomaly_maps = self._compute_scores(embeddings, patch_shape)
             image_scores.extend(anomaly_scores.cpu().tolist())
             image_labels.extend(labels.cpu().tolist())
+            image_paths_list.extend(list(paths))
 
             if self.config.seg_masks:
                 upsampled_maps = F.interpolate(
@@ -990,6 +990,36 @@ class PatchCoreTrainer:
             "image_ap": self._safe_average_precision(image_labels, image_scores),
             "pixel_ap": self._safe_average_precision(image_labels, image_scores) if self.config.seg_masks else float("nan"),
         }
+        _scores_arr = np.array(image_scores)
+        _labels_arr = np.array(image_labels)
+
+        if len(set(_labels_arr)) >= 2:
+            _fpr, _tpr, _thresholds = metrics.roc_curve(_labels_arr, _scores_arr)
+            _opt_idx = int(np.argmax(_tpr - _fpr))
+            _threshold = float(_thresholds[_opt_idx])
+        else:
+            _threshold = float(np.median(_scores_arr))  # fallback if single class
+
+        _predicted = (_scores_arr >= _threshold).astype(int)
+
+        error_analysis_path = self.output_dir / f"{category}_error_analysis.csv"
+        with open(error_analysis_path, "w", newline="", encoding="utf-8") as _f:
+            _writer = csv.DictWriter(
+                _f,
+                fieldnames=["image_path", "true_label", "anomaly_score", "predicted_label"],
+            )
+            _writer.writeheader()
+            for _path, _true, _score, _pred in zip(
+                image_paths_list, _labels_arr, _scores_arr, _predicted
+            ):
+                _writer.writerow({
+                    "image_path": _path,
+                    "true_label": int(_true),
+                    "anomaly_score": round(float(_score), 6),
+                    "predicted_label": int(_pred),
+                })
+
+        logging.info("Error analysis CSV saved to %s (threshold=%.4f)", error_analysis_path, _threshold)
 
         del image_scores, image_labels, pixel_scores, pixel_labels, loader
         torch.cuda.empty_cache()
