@@ -357,8 +357,23 @@ For each of the six AutoVI categories, we train a separate PatchCore model, as e
 
 \paragraph*{Justification of choosing coreset ratio}
 
-The 10% coreset sampling ratio is in line with the original PatchCore recommendation~\citep{Roth2022TotalRecall}, which showed that keeping a tenth of the full patch feature set gives enough coverage of the nominal distribution while keeping memory and nearest-neighbor search manageable during inference time. At this ratio, the biggest category (underbody_screw, 373 training images) gives about $3 \times 10^4$ patches before subsampling. This is a bank size where k-center selection is still possible in the chunked implementation (coreset_chunk_size = 8192).
-Greedy k-center selection needs to calculate the distance between the candidate features and the currently chosen set over and over again. To avoid making the full $N \times N$ distance matrix, the implementation works on features in groups of 8192 rows at a time, updating a running minimum-distance vector. This number strikes a balance between GPU memory pressure and iteration overhead, and it is in line with the typical $L_2$-distance batch sizes used in PatchCore-style retrieval pipelines.
+The 10\% coreset sampling ratio is in line with the original PatchCore 
+recommendation~\citep{Roth2022TotalRecall}, which showed that keeping 
+a tenth of the full patch feature set gives enough coverage of the 
+nominal distribution while keeping memory and nearest-neighbour search 
+manageable during inference. At this ratio, the largest category 
+(\texttt{underbody\_screw}, 373 training images) yields approximately 
+$3 \times 10^4$ patches before subsampling --- a bank size where 
+k-center selection remains feasible within the chunked implementation 
+(\texttt{coreset\_chunk\_size} $= 8192$).
+
+Greedy k-center selection requires repeated distance computations 
+between candidate features and the current selected set. To avoid 
+materialising the full $N \times N$ distance matrix, the implementation 
+processes features in chunks of 8192 rows at a time, updating a 
+running minimum-distance vector. This value balances GPU memory 
+pressure against iteration overhead, consistent with typical 
+$L_2$-distance batch sizes used in PatchCore-style retrieval pipelines.
 
 \subsection{Centralized Learning Results}
 
