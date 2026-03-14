@@ -355,6 +355,11 @@ Our implementation uses the following configuration:
 
 For each of the six AutoVI categories, we train a separate PatchCore model, as each category exhibits distinct visual characteristics and defect patterns.
 
+\paragraph*{Justification of choosing coreset ratio}
+
+The 10% coreset sampling ratio is in line with the original PatchCore recommendation~\citep{Roth2022TotalRecall}, which showed that keeping a tenth of the full patch feature set gives enough coverage of the nominal distribution while keeping memory and nearest-neighbor search manageable during inference time. At this ratio, the biggest category (underbody_screw, 373 training images) gives about $3 \times 10^4$ patches before subsampling. This is a bank size where k-center selection is still possible in the chunked implementation (coreset_chunk_size = 8192).
+Greedy k-center selection needs to calculate the distance between the candidate features and the currently chosen set over and over again. To avoid making the full $N \times N$ distance matrix, the implementation works on features in groups of 8192 rows at a time, updating a running minimum-distance vector. This number strikes a balance between GPU memory pressure and iteration overhead, and it is in line with the typical $L_2$-distance batch sizes used in PatchCore-style retrieval pipelines.
+
 \subsection{Centralized Learning Results}
 
 We first establish baseline performance by training PatchCore models in a centralized manner, where all training data for each category is available to a single model. Table \ref{tab:centralized_results_random} presents the performance metrics across all six categories using random coreset sampling.
@@ -529,9 +534,13 @@ The two figures below visualize the comparisons between the federated implementa
 \end{figure}
 \FloatBarrier
 
+In four out of six categories, federated training with k-center aggregation does as well or better than centralized training on image-level ROC AUC. The biggest absolute gains are in \texttt{underbody\_pipes} (0.95 → 1.00) and \texttt{underbody\_screw} (0.95 → 0.99). It may seem strange, but putting data on three non-IID clients does not make it harder to tell the difference between normal and abnormal data. In fact, it can make it easier. One possible reason is that server-side k-center aggregation across concatenated client banks creates a more diverse coreset than any single client could make on its own, which is like adding more data to the feature space. Pixel-level ROC AUC stays stable across all categories $\Delta \leq 0.02$, which shows that spatial localization works well even when the data is split up across different servers. The one consistent weakness is \texttt{pipe\_staple}, where image AUC drops from 0.47 to 0.51 centralized vs. 0.51 federated. This is a small improvement over a low baseline, which suggests that this category is still hard no matter how you train.
+
 \section {Trust-Enhancing Mechanisms}
 \subsection{Privacy}
 \subsubsection{Differential Privacy}
+
+
 
 First introduced by \citep{Dwork2006Calibrating} we implement differential privacy at the client before sending features to the server, so each client's contribution is bounded and noisy.
 \begin{itemize}
@@ -561,6 +570,15 @@ Introducing differental privacy decreases our scores almost to the level of cent
 \end{figure}
 \FloatBarrier
 
+When you add differential privacy to client uploads, both image- and pixel-level metrics drop significantly compared to the non-private federated baseline. The average Image ROC AUC drops from 0.74 to 0.58, and it only partially recovers to centralized levels (0.69). The degradation isn't the same for all categories. For example, \texttt{underbody\_pipes} still has a good discrimination rate of 0.80 compared to 1.00 without DP, but \texttt{tank\_screw} drops to 0.45, which is lower than the centralized baseline of 0.57. Pixel ROC AUC drops from an average of 0.87 (federated) to 0.65 (federated-DP), and \texttt{pipe\_staple} drops to 0.52. The difference between image-level and pixel-level degradation suggests that the Gaussian noise added at the feature level breaks up fine-grained spatial structure more than coarse discriminative signal. At $\varepsilon \approx 1.45$, the privacy-utility trade-off is very aggressive. The budget is tight enough to provide good protection, but the cost would probably be too high for production deployment without more noise calibration.
+
+\paragraph*{Justification for choosing DP Parameters}
+
+Using the standard Gaussian mechanism formula, the noise scale is directly derived from the target privacy budget: \begin{equation} \sigma = \frac{\sqrt{2 \ln(1.25 / \delta)}}{\varepsilon} \end{equation} with the per-feature noise standard deviation set to $\sigma \cdot C$, where $C$ is the $L_2$ clipping threshold. For datasets of this size, we set $\delta = 10^{-5}$, which is a standard choice. For all six categories, where $N \leq 373$, the rule of thumb $\delta \ll 1/N$ is satisfied. 
+In order to ensure that clipping eliminates actual outliers rather than systematically shrinking all vectors, the clipping norm $C = 1.0$ is selected to match the typical $L_2$ magnitude of Wide ResNet-50 intermediate features following ImageNet normalization. 
+To achieve a strong privacy guarantee, the target $\varepsilon = 1.0$ is chosen; values below $2.0$ are typically regarded as tight for sensitive industrial data. According to the performance results in Section~\ref{sec:rdp_results}, the Gaussian mechanism produces $\sigma \approx 4.84$ under these conditions, which means the injected noise is almost five times the magnitude of the clipped signal. This is a purposeful trade-off that prioritizes privacy over utility.
+
+
 \subsubsection{Renyi Differential Privacy}
 Introduced by \citep{Mironov_2017} Rényi Differential Privacy (RDP) is a generalization of differential privacy that provides a more mathematically tractable way to analyze the composition of private mechanisms, particularly for iterative algorithms.
  \\
@@ -575,6 +593,11 @@ where the Rényi divergence of order $\alpha > 1$ between distributions $P$ and 
  \end{equation}
  \\
  RDP is a stronger definition than $(\epsilon, \delta)$-DP. If a mechanism satisfies $(\alpha, \epsilon)$-RDP, then it also satisfies $\left(\epsilon + \frac{\ln(1/\delta)}{\alpha-1}, \delta\right)$-DP for any $\delta \in (0, 1)$. This conversion allows researchers to track privacy loss in the RDP domain and translate the final bound back to the standard DP language.
+
+\paragraph*{Justification for choosing RDP orders}
+
+The tightest $(\varepsilon, \delta)$-DP bound is obtained by choosing the order that minimizes the grid of Rényi orders $\alpha \in −1.25,\ 1.5,\ 2,\ 3,\ 4,\ 5,\ 8,\ 10,\ 16,\ 32,\ 64,\ 128\}$, where $T$ is the number of composition steps (equivalent to the number of categories released per client). The accountant chooses $\alpha = 16$ as the best order under the experimental configuration ($\sigma \approx 4.84$, $T = 2$, $\delta = 10^{-5}$), resulting in a total $\varepsilon \approx 1.45$. The grid ensures that the minimum is not overlooked at either extreme by covering both low orders, where the divergence term predominates, and high orders, where the composition term predominates.
+ 
  \paragraph*{Key Properties}
 \begin{itemize}
 	\item \textbf{Composition:} If $\mathcal{M}_1$ satisfies $(\alpha, \epsilon_1)$-RDP and $\mathcal{M}_2$ satisfies $(\alpha, \epsilon_2)$-RDP, then their composition satisfies $(\alpha, \epsilon_1 + \epsilon_2)$-RDP. This linear composition is significantly tighter than the "Advanced Composition" theorem used in standard DP.
@@ -596,6 +619,8 @@ where the Rényi divergence of order $\alpha > 1$ between distributions $P$ and 
     \label{fig:detailed_comparison004}
 \end{figure}
 \FloatBarrier
+
+Standard DP and RDP yield comparable utility outcomes, with RDP exhibiting a marginally inferior image-level AUC on average (0.57 versus 0.58), yet a slightly superior pixel-level ROC AUC in specific categories (e.g., \texttt{engine\_wiring}: 0.67 versus 0.65, \texttt{pipe\_staple}: 0.54 versus 0.52). The practical distinction between the two mechanisms is minimal given the selected parameterization. The primary theoretical advantage of RDP—stricter composition bounds—does not yield a quantifiable utility increase in this context, as the principal expense is the noise multiplier $\sigma \approx 4.84$, rather than composition across rounds. Both versions fail on \texttt{tank\_screw}, where the AUC for RDP image A drops to 0.42, which is lower than random chance. This means that the discriminative features in this category are mostly found in a low-amplitude subspace that is more affected by high-variance Gaussian perturbations. Pixel AP drops to almost zero in all categories when either DP variant is used. This means that spatial localization doesn't really work at this privacy budget.
 
 The results indicate a scenario with strong privacy guarantees but significantly degraded utility (anomaly detection performance).
 The use of Differential Privacy (DP) with a high noise level has severely impacted the model's ability to distinguish between normal and anomalous images in most categories.
@@ -699,6 +724,10 @@ Finally, the algorithm combines all per-subgroup coresets into a single unified 
 
 The algorithm outputs the coreset $\mathcal{C}$ together with allocation metadata $\{M_k\}_{k=1}^K$, enabling fairness auditing.
 
+\paragraph*{Justification}
+
+Because it maintains the natural data distribution across subgroups while maintaining per-group k-center diversity, the proportional allocation mode is employed in all reported experiments. Each subgroup $k$ receives $M_k = \lfloor M \cdot N_k / N \rfloor$ slots since the target coreset size $M$ is inherited from the global \texttt{coreset\_sampling\_ratio} $= 0.1$. To keep the fairness pass computationally lightweight, random sampling within each subgroup is used at the intra-group level instead of k-center; the per-group k-center step, which comes before server aggregation, satisfies the global diversity objective.
+
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{figures/comparison005.png}
@@ -713,6 +742,8 @@ The algorithm outputs the coreset $\mathcal{C}$ together with allocation metadat
     \caption{Detailed per-category comparison of all four evaluation metrics (Image AUROC, Pixel AUROC, Image AP, Pixel AP) between centralized and federated approaches.}
     \label{fig:detailed_comparison005}
 \end{figure}
+
+Fairness-aware coreset selection leads to a small but consistent drop in image-level ROC AUC compared to the standard federated baseline (avg. 0.74 → 0.62). The pixel-level ROC AUC stays close to both baselines (avg. 0.86). The performance cost is mostly in categories where the main client has a lot of training data. For example, \texttt{underbody\_screw} drops from 0.99 to 0.65 at the image level, and \texttt{engine\_wiring} drops from 0.73 to 0.61. This is the expected trade-off of proportional allocation: smaller subgroups get a bigger share of coreset slots compared to their data volume, which makes the majority distribution less covered. Pixel AP drops more sharply for some categories (e.g., \texttt{underbody\_screw}: 0.29 → 0.01), which means that spatial localization is very sensitive to the composition of the coreset. The fairness variant costs very little ($\Delta \leq 0.02$) for categories with more balanced client splits, like \texttt{pipe\_clip} and \texttt{pipe\_staple}. This shows that the penalty grows with the amount of data imbalance between clients.
 
 \paragraph{Discussion}
 
@@ -755,6 +786,14 @@ We implement the following enhancements for interpretability:
 
  We implemented robustness by injecting controlled corruptions and Gaussian noise during training, then hardening the feature bank and scoring pipeline with norm/cosine filters and optional score clipping. On the federated side, uploads are chunked and audited with norm/cosine sanity checks and outlier handling, and aggregation can be made robust via median/trimmed‑mean client filtering. These options are exposed as CLI flags so we can sweep low/medium/high noise regimes and compare how performance degrades or stabilizes under corruption.
 
+ \paragraph*{Justification}
+
+Using an additive perturbation $\mathcal{N}(0, \sigma_r^2)$ applied per pixel per channel, robustness experiments introduce Gaussian noise directly into the input image tensor following normalization.  
+
+Three different noise levels are assessed: low noise ($\sigma_r = 0.05$), medium noise ($\sigma_r = 0.10$), and high noise ($\sigma_r = 0.20$), which correspond to approximately $5\%$, $10\%$, and $20\%$ of the normalized pixel range. 
+These values, which are displayed as the \texttt{--gaussian-noise-std} flag in the training configuration, were selected to cover the range from imperceptible perturbation to visually degraded input. 
+In order to simulate production-line variability in illumination and focus, corruption augmentation during training uses \texttt{corruption\_prob} $= 0.5$ and \texttt{corruption\_strength} $= 0.2$, applying random color jitter, autocontrast, sharpness adjustment, and Gaussian blur with probability $0.5$ per image—a standard multi-corruption protocol.
+
  \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{figures/comparison006.png}
@@ -769,6 +808,9 @@ We implement the following enhancements for interpretability:
     \caption{Detailed per-category comparison of all four evaluation metrics (Image AUROC, Pixel AUROC, Image AP, Pixel AP) between centralized and federated approaches.}
     \label{fig:detailed_comparison006}
 \end{figure}
+
+With low-noise corruption, the image-level ROC AUC only goes down a little across all categories ($\text{avg.}\ 0.74 \to 0.72$). This shows that the k-center memory bank has enough coverage to handle a small shift in distribution at test time. With medium noise, the performance drops by about $0.01$–$0.02$ per category, but it stays in the same range. High noise is the first level where you can see real degradation: at the image level, \texttt{tank\_screw} drops from $0.62$ to $0.50$ and \texttt{pipe\_clip} drops from $0.59$ to $0.56$. The pixel ROC AUC also drops more broadly ($\text{avg.}\ 0.87 \to 0.81$). 
+The underbody categories stay strong even when there is a lot of noise (image AUC $\geq 0.93$ for \texttt{underbody\_pipes}), which makes sense because their larger training sets cover more memory banks. Pixel AP is more sensitive than ROC AUC at all noise levels. The only exception is \texttt{underbody\_screw}, which keeps a strong pixel AP ($0.38$ at high noise vs. $0.29$ at baseline). Overall, the federated pipeline is fairly strong against moderate input corruption. As noise increases, localization metrics get worse faster than image-level discrimination.
 
 \section{Ablation study}
 
