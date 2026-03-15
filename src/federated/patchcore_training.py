@@ -1001,21 +1001,24 @@ class PatchCoreTrainer:
             _threshold = float(np.median(_scores_arr))  # fallback if single class
 
         _predicted = (_scores_arr >= _threshold).astype(int)
-
+        _score_min = _scores_arr.min()
+        _score_max = _scores_arr.max()
+        _predicted_prob = (_scores_arr - _score_min) / (_score_max - _score_min + 1e-12)
         error_analysis_path = self.output_dir / f"{category}_error_analysis.csv"
         with open(error_analysis_path, "w", newline="", encoding="utf-8") as _f:
             _writer = csv.DictWriter(
                 _f,
-                fieldnames=["image_path", "true_label", "anomaly_score", "predicted_label"],
+                fieldnames=["image_path", "true_label", "anomaly_score", "predicted_prob", "predicted_label"],  # ← added
             )
             _writer.writeheader()
-            for _path, _true, _score, _pred in zip(
-                image_paths_list, _labels_arr, _scores_arr, _predicted
+            for _path, _true, _score, _prob, _pred in zip(
+                image_paths_list, _labels_arr, _scores_arr, _predicted_prob, _predicted  # ← added _prob
             ):
                 _writer.writerow({
                     "image_path": _path,
                     "true_label": int(_true),
                     "anomaly_score": round(float(_score), 6),
+                    "predicted_prob": round(float(_prob), 4),   # ← added
                     "predicted_label": int(_pred),
                 })
 

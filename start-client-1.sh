@@ -20,5 +20,6 @@ python ./src/federated/client_sequential.py \
     --image-size 512 --batch-size 4 --num-workers 4 \
     --coreset-method kcenter --coreset-ratio 0.1 --coreset-max-samples 5000 \
     --coreset-chunk-size 16384 --distance-chunk-size 8192 \
-    --interpretability --saliency-max-images 10 \
+    --interpretability --saliency-max-images 300 \
+    --save_interpretability True --shap_max_images 30\
     --device cuda --log-level INFO
