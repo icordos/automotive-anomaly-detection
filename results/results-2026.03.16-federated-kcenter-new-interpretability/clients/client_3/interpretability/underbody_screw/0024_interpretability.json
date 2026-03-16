@@ -1,0 +1,9 @@
+{
+  "image": "data/raw/underbody_screw/underbody_screw/test/good/0024.png",
+  "patch_shape": [
+    64,
+    64
+  ],
+  "anomaly_map": "0024_anomaly.png",
+  "gradcam": "0024_gradcam.png"
+}

@@ -1,0 +1,9 @@
+{
+  "image": "data/raw/underbody_pipes/underbody_pipes/test/obstruction/0117.png",
+  "patch_shape": [
+    64,
+    64
+  ],
+  "anomaly_map": "0117_anomaly.png",
+  "gradcam": "0117_gradcam.png"
+}

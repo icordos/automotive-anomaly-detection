@@ -1,0 +1,9 @@
+{
+  "image": "data/raw/tank_screw/tank_screw/test/good/0031.png",
+  "patch_shape": [
+    64,
+    64
+  ],
+  "anomaly_map": "0031_anomaly.png",
+  "gradcam": "0031_gradcam.png"
+}

@@ -1,0 +1,9 @@
+{
+  "image": "data/raw/pipe_clip/pipe_clip/test/good/0113.png",
+  "patch_shape": [
+    64,
+    64
+  ],
+  "anomaly_map": "0113_anomaly.png",
+  "gradcam": "0113_gradcam.png"
+}

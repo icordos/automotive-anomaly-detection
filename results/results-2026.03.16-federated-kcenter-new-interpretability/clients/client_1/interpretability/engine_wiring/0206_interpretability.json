@@ -1,0 +1,9 @@
+{
+  "image": "data/raw/engine_wiring/engine_wiring/test/fastening/0206.png",
+  "patch_shape": [
+    64,
+    64
+  ],
+  "anomaly_map": "0206_anomaly.png",
+  "gradcam": "0206_gradcam.png"
+}

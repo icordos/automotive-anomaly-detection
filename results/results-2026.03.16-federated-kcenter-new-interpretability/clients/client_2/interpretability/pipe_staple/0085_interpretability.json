@@ -1,0 +1,9 @@
+{
+  "image": "data/raw/pipe_staple/pipe_staple/test/missing/0085.png",
+  "patch_shape": [
+    64,
+    64
+  ],
+  "anomaly_map": "0085_anomaly.png",
+  "gradcam": "0085_gradcam.png"
+}
