@@ -17,6 +17,7 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 import torch
+import tqdm
 
 from patchcore_training import PatchCoreTrainer, PatchCoreTrainingConfig
 
@@ -340,7 +341,7 @@ class SequentialPatchCoreClient:
         valid_aurocs: List[float] = []
         total_test_images = 0
         
-        # Fairness tracking
+
         if enable_fairness:
             from fairness_utils import save_fairness_report, log_fairness_summary
 
@@ -350,17 +351,15 @@ class SequentialPatchCoreClient:
                 continue
 
             self.trainer.load_memory_bank(global_banks[cat].cpu())
-            
+
             if enable_fairness:
                 metrics_dict, n_test, fairness_report = self.trainer.evaluate_with_fairness(cat)
-                
-                # Save fairness report
                 fairness_path = self.output_dir / f"client_{self.client_id}_{cat}_fairness.json"
                 save_fairness_report(fairness_report, fairness_path)
                 log_fairness_summary(fairness_report)
             else:
                 metrics_dict, n_test = self.trainer.evaluate(cat)
-            
+
             total_test_images += n_test
 
             for k, v in metrics_dict.items():
@@ -369,6 +368,20 @@ class SequentialPatchCoreClient:
             au = metrics_dict.get("image_roc_auc")
             if au is not None and not np.isnan(au):
                 valid_aurocs.append(float(au))
+
+            # --- Collect embeddings for t-SNE ---
+            logging.info("[Client %d] Collecting test embeddings for t-SNE (%s)...", self.client_id, cat)
+            tsne_data = self.trainer.collect_test_embeddings(cat)
+            tsne_path = self.output_dir / f"client_{self.client_id}_{cat}_tsne_data.npz"
+            np.savez_compressed(
+                tsne_path,
+                embeddings=tsne_data["embeddings"],
+                labels=tsne_data["labels"],
+                scores=tsne_data["scores"],
+                paths=tsne_data["paths"],
+            )
+            logging.info("[Client %d] Saved t-SNE data (%d images) to %s", self.client_id, len(tsne_data["labels"]), tsne_path)
+            # ------------------------------------
 
             torch.cuda.empty_cache()
             import gc
@@ -385,6 +398,40 @@ class SequentialPatchCoreClient:
 
         return all_metrics
 
+
+    def collect_test_embeddings(self, category: str) -> Dict[str, np.ndarray]:
+        """Collect per-image mean embeddings, anomaly scores, labels, paths for t-SNE."""
+        loader = self._loader(category, "test")
+        
+        all_embeddings: List[np.ndarray] = []
+        all_labels: List[int] = []
+        all_paths: List[str] = []
+        all_scores: List[float] = []
+
+        for batch in tqdm(loader, desc=f"Collecting embeddings {category}"):
+            images, labels, masks, paths = batch
+            images = images.to(self.model.device)
+
+            feats = self.model.extract(images)
+            embeddings, patch_shape = self.model.aggregate(feats)
+            anomaly_scores, _ = self._compute_scores(embeddings, patch_shape)
+
+            # Mean-pool patches → one vector per image (B, num_patches, dim) → (B, dim)
+            image_embeddings = embeddings.mean(dim=1).detach().cpu().numpy()
+
+            all_embeddings.append(image_embeddings)
+            all_labels.extend(labels.cpu().tolist())
+            all_paths.extend(list(paths))
+            all_scores.extend(anomaly_scores.cpu().tolist())
+
+            del feats, embeddings, anomaly_scores, images
+
+        return {
+            "embeddings": np.concatenate(all_embeddings, axis=0).astype(np.float32),  # (N, 1536)
+            "labels":     np.array(all_labels,  dtype=np.int32),                       # (N,)
+            "scores":     np.array(all_scores,  dtype=np.float32),                     # (N,)
+            "paths":      np.array(all_paths),                                          # (N,)
+        }
 
 # ============================================
 # CLI Argument Parsing
