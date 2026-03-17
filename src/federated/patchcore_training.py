@@ -1035,6 +1035,40 @@ class PatchCoreTrainer:
 
         return metrics_dict, self._count_test_images(category)
 
+    def collect_test_embeddings(self, category: str) -> Dict[str, np.ndarray]:
+        """Collect per-image mean embeddings, anomaly scores, labels, paths for t-SNE."""
+        loader = self._loader(category, "test")
+        
+        all_embeddings: List[np.ndarray] = []
+        all_labels: List[int] = []
+        all_paths: List[str] = []
+        all_scores: List[float] = []
+
+        for batch in tqdm(loader, desc=f"Collecting embeddings {category}"):
+            images, labels, masks, paths = batch
+            images = images.to(self.model.device)
+
+            feats = self.model.extract(images)
+            embeddings, patch_shape = self.model.aggregate(feats)
+            anomaly_scores, _ = self._compute_scores(embeddings, patch_shape)
+
+            # Mean-pool patches → one vector per image (B, num_patches, dim) → (B, dim)
+            image_embeddings = embeddings.mean(dim=1).detach().cpu().numpy()
+
+            all_embeddings.append(image_embeddings)
+            all_labels.extend(labels.cpu().tolist())
+            all_paths.extend(list(paths))
+            all_scores.extend(anomaly_scores.cpu().tolist())
+
+            del feats, embeddings, anomaly_scores, images
+
+        return {
+            "embeddings": np.concatenate(all_embeddings, axis=0).astype(np.float32),  # (N, 1536)
+            "labels":     np.array(all_labels,  dtype=np.int32),                       # (N,)
+            "scores":     np.array(all_scores,  dtype=np.float32),                     # (N,)
+            "paths":      np.array(all_paths),                                          # (N,)
+        }
+
     def _count_test_images(self, category: str) -> int:
         ds = AutoVIAnomalyDataset(
             dataset_root=self.config.dataset_root,
