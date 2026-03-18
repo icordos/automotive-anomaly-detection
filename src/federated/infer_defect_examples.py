@@ -37,6 +37,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--shap-max-images", type=int, default=0)
     p.add_argument("--shap-background", type=int, default=20)
     p.add_argument("--shap-max-patches", type=int, default=64)
+    p.add_argument("--patch-quality-top-percent", type=float, default=1.0)
     p.add_argument("--log-level", type=str, default="INFO")
     return p.parse_args()
 
@@ -99,6 +100,7 @@ def build_trainer(
         shap_max_images=args.shap_max_images,
         shap_background=args.shap_background,
         shap_max_patches=args.shap_max_patches,
+        patch_quality_top_percent=args.patch_quality_top_percent,
         seg_masks=False,
     )
     trainer = PatchCoreTrainer(config)

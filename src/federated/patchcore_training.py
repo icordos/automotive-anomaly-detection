@@ -73,6 +73,7 @@ class PatchCoreTrainingConfig:
     shap_max_images: int = 0
     shap_background: int = 20
     shap_max_patches: int = 64
+    patch_quality_top_percent: float = 1.0
     seg_masks: bool = True
     corruption_prob: float = 0.0
     corruption_strength: float = 0.2
@@ -122,6 +123,10 @@ class PatchCoreTrainingConfig:
             raise ValueError(f"shap_background must be > 0, got {self.shap_background}")
         if self.shap_max_patches <= 0:
             raise ValueError(f"shap_max_patches must be > 0, got {self.shap_max_patches}")
+        if not 0.0 < self.patch_quality_top_percent <= 100.0:
+            raise ValueError(
+                f"patch_quality_top_percent must be in (0, 100], got {self.patch_quality_top_percent}"
+            )
         if not 0.0 <= self.corruption_prob <= 1.0:
             raise ValueError(
                 f"corruption_prob must be in [0, 1], got {self.corruption_prob}"
@@ -760,7 +765,7 @@ class PatchCoreTrainer:
         img = self._unnormalize_image(image_tensor)
         scores_t = patch_scores.squeeze().detach().cpu()
         flat_scores = scores_t.flatten()
-        k_top = max(1, int(0.01 * flat_scores.numel()))
+        k_top = max(1, int((self.config.patch_quality_top_percent / 100.0) * flat_scores.numel()))
         topk_idx = torch.topk(flat_scores, k=k_top).indices
 
         bad_mask_t = torch.zeros_like(flat_scores, dtype=torch.bool)
@@ -853,7 +858,7 @@ class PatchCoreTrainer:
                     "gradcam": gradcam_out.name,
                     "patch_quality": patch_quality_out.name,
                     "patch_quality_overlay_only": patch_quality_overlay_only_out.name,
-                    "patch_quality_rule": "top_1_percent_patch_scores_red_rest_green",
+                    "patch_quality_rule": f"top_{self.config.patch_quality_top_percent:g}_percent_patch_scores_red_rest_green",
                 },
                 f,
                 indent=2,
@@ -1208,6 +1213,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--shap-max-images", type=int, default=0)
     parser.add_argument("--shap-background", type=int, default=20)
     parser.add_argument("--shap-max-patches", type=int, default=64)
+    parser.add_argument("--patch-quality-top-percent", type=float, default=1.0)
     parser.add_argument("--corruption-prob", type=float, default=0.0)
     parser.add_argument("--corruption-strength", type=float, default=0.2)
     parser.add_argument("--gaussian-noise-std", type=float, default=0.0)
@@ -1271,6 +1277,7 @@ def main() -> None:
         shap_max_images=args.shap_max_images,
         shap_background=args.shap_background,
         shap_max_patches=args.shap_max_patches,
+        patch_quality_top_percent=args.patch_quality_top_percent,
         seg_masks=args.seg_masks,
         corruption_prob=args.corruption_prob,
         corruption_strength=args.corruption_strength,
