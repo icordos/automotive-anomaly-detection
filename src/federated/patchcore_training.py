@@ -750,6 +750,33 @@ class PatchCoreTrainer:
         blended = (img * (1 - alpha) + overlay * alpha).astype(np.uint8)
         Image.fromarray(blended).save(out_path)
 
+    def _save_patch_quality_overlay(
+        self,
+        image_tensor: Tensor,
+        patch_scores: Tensor,
+        out_path: Path,
+        threshold: float = 0.5,
+    ) -> None:
+        img = self._unnormalize_image(image_tensor)
+        scores = patch_scores.squeeze().detach().cpu().numpy()
+        scores = (scores - scores.min()) / (scores.max() - scores.min() + 1e-12)
+        bad_mask = scores >= threshold
+
+        patch_mask = torch.from_numpy(bad_mask.astype(np.float32)).unsqueeze(0).unsqueeze(0)
+        patch_mask = F.interpolate(
+            patch_mask,
+            size=(img.shape[0], img.shape[1]),
+            mode="nearest",
+        ).squeeze().numpy().astype(bool)
+
+        overlay = np.zeros_like(img)
+        overlay[..., 0] = np.where(patch_mask, 255, 0).astype(np.uint8)
+        overlay[..., 1] = np.where(patch_mask, 0, 255).astype(np.uint8)
+
+        alpha = 0.35
+        blended = (img * (1 - alpha) + overlay * alpha).astype(np.uint8)
+        Image.fromarray(blended).save(out_path)
+
     def _compute_gradcam(self, image_tensor: Tensor) -> np.ndarray:
         self.model.feature_extractor.zero_grad(set_to_none=True)
         image_tensor = image_tensor.unsqueeze(0).to(self.model.device)
@@ -784,6 +811,7 @@ class PatchCoreTrainer:
         image_tensor: Tensor,
         image_path: str,
         anomaly_map: Tensor,
+        patch_scores: Tensor,
         patch_shape: Tuple[int, int],
     ) -> None:
         category_dir = self.output_dir / "interpretability" / category
@@ -799,6 +827,9 @@ class PatchCoreTrainer:
         gradcam_out = category_dir / f"{stem}_gradcam.png"
         self._save_heatmap_overlay(image_tensor, gradcam, gradcam_out)
 
+        patch_quality_out = category_dir / f"{stem}_patch_quality.png"
+        self._save_patch_quality_overlay(image_tensor, patch_scores, patch_quality_out)
+
         meta_out = category_dir / f"{stem}_interpretability.json"
         with open(meta_out, "w", encoding="utf-8") as f:
             json.dump(
@@ -807,6 +838,8 @@ class PatchCoreTrainer:
                     "patch_shape": list(patch_shape),
                     "anomaly_map": anomaly_out.name,
                     "gradcam": gradcam_out.name,
+                    "patch_quality": patch_quality_out.name,
+                    "patch_quality_threshold": 0.5,
                 },
                 f,
                 indent=2,
@@ -953,6 +986,7 @@ class PatchCoreTrainer:
                         image_tensor=images[idx].detach().cpu(),
                         image_path=paths[idx],
                         anomaly_map=upsampled_maps[idx].detach().cpu(),
+                        patch_scores=anomaly_maps[idx].detach().cpu(),
                         patch_shape=patch_shape,
                     )
                     saliency_saved += 1

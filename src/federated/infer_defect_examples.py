@@ -131,6 +131,7 @@ def run_single_image(
             image_tensor=image_tensor,
             image_path=str(image_path),
             anomaly_map=upsampled_map,
+            patch_scores=anomaly_maps[0].detach().cpu(),
             patch_shape=patch_shape,
         )
 
