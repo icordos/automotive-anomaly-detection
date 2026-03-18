@@ -755,12 +755,17 @@ class PatchCoreTrainer:
         image_tensor: Tensor,
         patch_scores: Tensor,
         out_path: Path,
-        threshold: float = 0.5,
+        overlay_only_path: Path | None = None,
     ) -> None:
         img = self._unnormalize_image(image_tensor)
-        scores = patch_scores.squeeze().detach().cpu().numpy()
-        scores = (scores - scores.min()) / (scores.max() - scores.min() + 1e-12)
-        bad_mask = scores >= threshold
+        scores_t = patch_scores.squeeze().detach().cpu()
+        flat_scores = scores_t.flatten()
+        k_top = max(1, int(0.01 * flat_scores.numel()))
+        topk_idx = torch.topk(flat_scores, k=k_top).indices
+
+        bad_mask_t = torch.zeros_like(flat_scores, dtype=torch.bool)
+        bad_mask_t[topk_idx] = True
+        bad_mask = bad_mask_t.reshape(scores_t.shape).numpy()
 
         patch_mask = torch.from_numpy(bad_mask.astype(np.float32)).unsqueeze(0).unsqueeze(0)
         patch_mask = F.interpolate(
@@ -776,6 +781,8 @@ class PatchCoreTrainer:
         alpha = 0.35
         blended = (img * (1 - alpha) + overlay * alpha).astype(np.uint8)
         Image.fromarray(blended).save(out_path)
+        if overlay_only_path is not None:
+            Image.fromarray(overlay).save(overlay_only_path)
 
     def _compute_gradcam(self, image_tensor: Tensor) -> np.ndarray:
         self.model.feature_extractor.zero_grad(set_to_none=True)
@@ -828,7 +835,13 @@ class PatchCoreTrainer:
         self._save_heatmap_overlay(image_tensor, gradcam, gradcam_out)
 
         patch_quality_out = category_dir / f"{stem}_patch_quality.png"
-        self._save_patch_quality_overlay(image_tensor, patch_scores, patch_quality_out)
+        patch_quality_overlay_only_out = category_dir / f"{stem}_patch_quality_overlay_only.png"
+        self._save_patch_quality_overlay(
+            image_tensor,
+            patch_scores,
+            patch_quality_out,
+            overlay_only_path=patch_quality_overlay_only_out,
+        )
 
         meta_out = category_dir / f"{stem}_interpretability.json"
         with open(meta_out, "w", encoding="utf-8") as f:
@@ -839,7 +852,8 @@ class PatchCoreTrainer:
                     "anomaly_map": anomaly_out.name,
                     "gradcam": gradcam_out.name,
                     "patch_quality": patch_quality_out.name,
-                    "patch_quality_threshold": 0.5,
+                    "patch_quality_overlay_only": patch_quality_overlay_only_out.name,
+                    "patch_quality_rule": "top_1_percent_patch_scores_red_rest_green",
                 },
                 f,
                 indent=2,
