@@ -829,6 +829,18 @@ The underbody categories stay strong even when there is a lot of noise (image AU
 
 \section{Ablation study}
 
+The strategy we adopted for our study was to start with a base model and progressively add enhancements on top it as shown in Figure \ref{fig:ablation-strategy} . In this respect, after we identified the base model as PatchCore, we implemented the training pipeline in a centralized fashion and we ran two ablations where we varied the coreset selection algorithm, from Random to K-Center. Then we implemented the federated learning scenario and we distributed the data between three clients in a non-IID fashion. The first two ablations also varied the coreset selection algorithm.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{figures/ablation-strategy.png}
+    \caption{Ablation strategy}
+    \label{fig:ablation-strategy}
+\end{figure}
+
+All subsequent ablations continued with the federated learning approach with the K-Center coreset selection algorithm. For the next two ablations we implemented first differential privacy, then Renyi DP. The trainings were ran with only one of these enabled. Continuing with trustworthiness inducing features like fairness, noise injection along with robustness enhancers with various levels of noise and interpretability. In the results table interpretability is not tracked explicitly because it has no effect on model performance. The last ablation was ran with multiple features enabled - Renyi DP plus medium noise injection for robustness enhancer.
+
+
 \begin{table*}[htbp]
 \centering
 \adjustbox{max width=\textwidth}{%
@@ -894,6 +906,25 @@ FedKC+RDP+Med    & 0.59  & 0.54  & 0.44  & 0.60  & 0.71  & 0.83  & 0.61  \\
 \end{table*}
 
 \FloatBarrier
+
+We track detailed ablation results in Tables \ref{tab:full_ablation_auroc} and \ref{tab:full_ablation_pixel_auroc}, more specifically image level and pixel level AUROC scores for each label and average across all labels. From these detailed results we distill the following key findings, first at image leve:
+\begin{itemize}
+	\item K-Center consistently outperforms random coreset selection (+10\% for both centralized and federated approaches)
+	\item Federated learning outperforms centralized learning (+5\% across both coreset selection strategies)
+	\item Performance is not consistent among classes, underbody pipes and screws outperforming the other classes by a rather large margin
+	\item Privacy is costly (-16\%) and Renyi DP doesn't help, on the contrary on average it brings -1\% penalty
+	\item Noise robustness degrades linearly with the noise increse
+\end{itemize}
+
+However, at pixel level:
+\begin{itemize}
+	\item Unlike the image level scores, here random and K-Center coreset sampling score similarly, just like centralized and federated approaches
+	\item Fairness is essentially free at pixel level
+	\item DP affects in a higher degree the model performance as compared to image level scores (22\% vs 16\%)
+	\item Pixel level scores show higher sensitivity to noise than image level scores
+\end{itemize}
+
+To conclude, we see that underbody labels perform better than the other labels, and that trustworthy AI extensions primarily erode performance on the labels that already perform poorly while the underbody labels remain resilient.
 
 \section{Experimental Results on Additional Datasets}
 
