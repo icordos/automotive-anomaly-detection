@@ -552,6 +552,9 @@ The two figures below visualize the comparisons between the federated implementa
 In four out of six categories, federated training with k-center aggregation does as well or better than centralized training on image-level ROC AUC. The biggest absolute gains are in \texttt{underbody\_pipes} (0.95 → 1.00) and \texttt{underbody\_screw} (0.95 → 0.99). It may seem strange, but putting data on three non-IID clients does not make it harder to tell the difference between normal and abnormal data. In fact, it can make it easier. One possible reason is that server-side k-center aggregation across concatenated client banks creates a more diverse coreset than any single client could make on its own, which is like adding more data to the feature space. Pixel-level ROC AUC stays stable across all categories $\Delta \leq 0.02$, which shows that spatial localization works well even when the data is split up across different servers. The one consistent weakness is \texttt{pipe\_staple}, where image AUC drops from 0.47 to 0.51 centralized vs. 0.51 federated. This is a small improvement over a low baseline, which suggests that this category is still hard no matter how you train.
 
 \section {Trust-Enhancing Mechanisms}
+
+As discussed in \citep{liu2021trustworthyaicomputationalperspective} there are six crucial dimensions to AI trustworthiness: (i) Safety \& Robustness, (ii) Non-discrimination \& Fairness, (iii) Explainability, (iv) Privacy, (v) Accountability \& Auditability, and (vi) Environmental Well-Being. To study the effects of trustworthiness on automotive anomaly detection, we pick four dimensions that we implement and measure in our pipeline: Privacy, Fairness, Interpretability and Robustness.
+
 \subsection{Privacy}
 \subsubsection{Differential Privacy}
 
