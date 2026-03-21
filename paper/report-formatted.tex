@@ -51,7 +51,7 @@
 \maketitle
 
 \begin{abstract}
-We investigate industrial anomaly detection for automotive inspection using the AutoVI dataset. We implement PatchCore with coreset subsampling and evaluate centralized and federated setups under non‑IID client splits, including fairness‑aware sampling strategies. To align with trustworthy AI goals, we incorporate differential privacy, robustness via controlled corruptions, and explainability through anomaly heatmaps, Grad‑CAM, and SHAP visualizations. We report image‑ and pixel‑level performance across six categories and extend inference to additional datasets to assess generalization and qualitative behavior.
+In the past decade industrial anomaly detection for automotive car parts through automatic image recognition has reached human level performance. While investigating state of the art approaches we uncovered a potential gap in trustworthiness additions to current state of the art anomaly detection. Thus we implement a PatchCore model with coreset subsampling and we evaluate centralized and federated setups under non‑IID client splits, including fairness‑aware sampling strategies. To align with trustworthy AI goals, we incorporate differential privacy, robustness via controlled corruptions, and explainability through anomaly heatmaps, Grad‑CAM, and SHAP visualizations. We report image‑ and pixel‑level performance across six categories and extend inference to additional datasets to assess generalization and qualitative behavior. The analysis of the results of all ablations demonstrate that trustworthiness is achievable but not neutral in terms of the associated cost to model accuracy.
 
 \end{abstract}
 \tableofcontents
@@ -438,7 +438,7 @@ In the figures below we can observe the difference is a visual manner.
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{figures/comparison-central-random-kcenter-detailed.png}
-    \caption{Detailed per-category comparison of all four evaluation metrics (Image AUROC, Pixel AUROC, Image AP, Pixel AP) between centralized and federated approaches.}
+    \caption{Detailed per-category comparison of all four evaluation metrics (Image AUROC, Pixel AUROC, Image AP, Pixel AP) between random and K-Center coreset sampling strategies.}
     \label{fig:detailed_comparisoncrk002}
 \end{figure}
 \FloatBarrier
@@ -492,7 +492,7 @@ Key configuration parameters for the federated setup:
     \item Number of federated rounds: 3
     \item Memory bank size limit: 50,000 features per category
     \item Aggregation method: Concatenation + random sampling
-    \item Communication protocol: gRPC via Flower framework
+    \item Communication protocol: customr framework based on pickle RPC
 \end{itemize}
 
 We implement a custom federated learning mechanism based on pickle RPC. We chose this over readily available frameworks like flower due to its strict synchronous client requirements, which was hard to implement in practice due to hardware availability. Our custom framework allowed asynchronous clients and separate upload and eval modes for clients. In the upload mode the client builds local memory banks and uploads them to the server. Once all clients have completed building their memory banks, the server will concatenate category banks and apply k-center coreset. In the eval mode the clients will download global banks into the trainer and compute the metrics.
@@ -598,6 +598,7 @@ To achieve a strong privacy guarantee, the target $\varepsilon = 1.0$ is chosen;
 
 
 \subsubsection{Renyi Differential Privacy}
+\label{sec:rdp_results}
 Introduced by \citep{Mironov_2017} Rényi Differential Privacy (RDP) is a generalization of differential privacy that provides a more mathematically tractable way to analyze the composition of private mechanisms, particularly for iterative algorithms.
  \\
 A randomized mechanism $\mathcal{M}$ satisfies $(\alpha, \epsilon)$-RDP if for any two adjacent datasets $D, D'$ (differing in a single element), the Rényi divergence of order $\alpha$ between their output distributions is bounded by
@@ -625,7 +626,7 @@ The tightest $(\varepsilon, \delta)$-DP bound is obtained by choosing the order 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{figures/comparison004.png}
-    \caption{Comprehensive performance comparison showing: (top-left) image-level AUROC, (top-right) pixel-level AUROC, (bottom-left) performance degradation heatmap, (bottom-right) average metrics across all categories.}
+    \caption{Comprehensive performance comparison showing: (top-left) image-level AUROC, (top-right) pixel-level AUROC, (bottom) average metrics across all categories.}
     \label{fig:comparison004}
 \end{figure}
 \FloatBarrier
@@ -815,7 +816,7 @@ In order to simulate production-line variability in illumination and focus, corr
  \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{figures/comparison006.png}
-    \caption{Comprehensive performance comparison showing: (top-left) image-level AUROC, (top-right) pixel-level AUROC, (bottom-left) performance degradation heatmap, (bottom-right) average metrics across all categories.}
+    \caption{Comprehensive performance comparison showing: (top-left) image-level AUROC, (top-right) pixel-level AUROC,  (bottom) average metrics across all categories.}
     \label{fig:comparison006}
 \end{figure}
 \FloatBarrier
@@ -1118,9 +1119,7 @@ To run centralized baseline:
 To run federated experiments, start the server first, then launch multiple clients. Refer to \texttt{docs/federated\_guide.md} for detailed configuration options including differential privacy and fairness-aware coreset selection.
 
 \section{Preprocessing Pipeline}
-The data is hosted on Zenodo, which is  free, open-access research data repository created by CERN and supported by the European Commission. Its purpose is to let researchers upload, preserve, and share all kinds of research outputs — not just papers, but datasets, code, software releases, posters, presentations, images, videos, notebooks, even entire project snapshots.
-\\
-The dataset is described in a croissant file provided by Renault. For each of the six categories the croissant metadata points to a zip file hosted on Zenodo. We have used the exact structure provided by Renault and the only preprocessing that we did was to unzip the archives.
+The data is hosted on Zenodo and is described in a croissant file provided by Renault. For each of the six categories the croissant metadata points to a zip archive. We have used the exact structure provided by Renault and the only preprocessing that we did was to unzip the archives.
 \\
 The dataset is structured per category as follows:
 \begin{itemize}
