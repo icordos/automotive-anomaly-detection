@@ -424,7 +424,7 @@ Next, we employ K-center coreset sampling, which greedily selects the most diver
       \label{tab:centralized_results}
   \end{table}
 
-On average, using kcenter coreset sampling improves Image AUROC (+0.095) and Image AP (+0.075), while Pixel AUROC is essentially flat ($-0.003$) and Pixel AP improves (+0.070). The biggest gains are in the underbody categories (both image- and pixel-level metrics jump notably), while pipe\_staple's image AUROC drops relative to the previous ablation. Overall, the updated results shift toward stronger image-level discrimination without a clear change in pixel AUROC.
+On average, using kcenter coreset sampling improves Image AUROC (+0.095) and Image AP (+0.075), while Pixel AUROC is essentially flat ($-0.003$) and Pixel AP improves (+0.070). The average masks huge per-category variance. The biggest gains are in the underbody categories (both image- and pixel-level metrics jump notably), while pipe\_staple's image AUROC drops relative to the previous ablation. Overall, the updated results shift toward stronger image-level discrimination without a clear change in pixel AUROC.
 
 In the figures below we can observe the difference in a visual manner.
 \begin{figure}[htbp]
@@ -549,7 +549,7 @@ The two figures below visualize the comparisons between the federated implementa
 \end{figure}
 \FloatBarrier
 
-In four out of six categories, federated training with k-center aggregation does as well or better than centralized training on image-level ROC AUC. The biggest absolute gains are in \texttt{underbody\_pipes} (0.95 → 1.00) and \texttt{underbody\_screw} (0.95 → 0.99). It may seem strange, but putting data on three non-IID clients does not make it harder to tell the difference between normal and abnormal data. In fact, it can make it easier. One possible reason is that server-side k-center aggregation across concatenated client banks creates a more diverse coreset than any single client could make on its own, which is like adding more data to the feature space. Pixel-level ROC AUC stays stable across all categories $\Delta \leq 0.02$, which shows that spatial localization works well even when the data is split up across different servers. The one consistent weakness is \texttt{pipe\_staple}, where image AUC drops from 0.47 to 0.51 centralized vs. 0.51 federated. This is a small improvement over a low baseline, which suggests that this category is still hard no matter how we train.
+In four out of six categories, federated training with k-center aggregation does as well or better than centralized training on image-level ROC AUC. The biggest absolute gains are in \texttt{underbody\_pipes} (0.95 → 1.00) and \texttt{underbody\_screw} (0.95 → 0.99). It may seem strange, but putting data on three non-IID clients does not make it harder to tell the difference between normal and abnormal data. In fact, it can make it easier. One possible reason is that server-side k-center aggregation across concatenated client banks creates a more diverse coreset than any single client could make on its own, which is like adding more data to the feature space. Pixel-level ROC AUC stays stable across all categories $\Delta \leq 0.02$, which shows that spatial localization works well even when the data is split up across different servers. 
 
 \section {Trust-Enhancing Mechanisms}
 
@@ -594,7 +594,7 @@ When we add differential privacy to client uploads, both image- and pixel-level 
 
 Using the standard Gaussian mechanism formula, the noise scale is directly derived from the target privacy budget: \begin{equation} \sigma = \frac{\sqrt{2 \ln(1.25 / \delta)}}{\varepsilon} \end{equation} with the per-feature noise standard deviation set to $\sigma \cdot C$, where $C$ is the $L_2$ clipping threshold. For datasets of this size, we set $\delta = 10^{-5}$, which is a standard choice. For all six categories, where $N \leq 373$, the rule of thumb $\delta \ll 1/N$ is satisfied. 
 In order to ensure that clipping eliminates actual outliers rather than systematically shrinking all vectors, the clipping norm $C = 1.0$ is selected to match the typical $L_2$ magnitude of Wide ResNet-50 intermediate features following ImageNet normalization. 
-To achieve a strong privacy guarantee, the target $\varepsilon = 1.0$ is chosen; values below $2.0$ are typically regarded as tight for sensitive industrial data. According to the performance results in Section~\ref{sec:rdp_results}, the Gaussian mechanism produces $\sigma \approx 4.84$ under these conditions, which means the injected noise is almost five times the magnitude of the clipped signal. This is a purposeful trade-off that prioritizes privacy over utility.
+To achieve a strong privacy guarantee, the target $\varepsilon = 1.45$ is chosen; values below $2.0$ are typically regarded as tight for sensitive industrial data. According to the performance results in Section~\ref{sec:rdp_results}, the Gaussian mechanism produces $\sigma \approx 4.84$ under these conditions, which means the injected noise is almost five times the magnitude of the clipped signal. This is a purposeful trade-off that prioritizes privacy over utility.
 
 
 \subsubsection{Renyi Differential Privacy}
@@ -745,7 +745,7 @@ The algorithm outputs the coreset $\mathcal{C}$ together with allocation metadat
 
 \paragraph*{Justification}
 
-Because it maintains the natural data distribution across subgroups while maintaining per-group k-center diversity, the proportional allocation mode is employed in all reported experiments. Each subgroup $k$ receives $M_k = \lfloor M \cdot N_k / N \rfloor$ slots since the target coreset size $M$ is inherited from the global \texttt{coreset\_sampling\_ratio} $= 0.1$. To keep the fairness pass computationally lightweight, random sampling within each subgroup is used at the intra-group level instead of k-center; the per-group k-center step, which comes before server aggregation, satisfies the global diversity objective.
+The proportional allocation mode is employed in all reported experiments, as it preserves the natural data distribution across subgroups while ensuring balanced representation. Each subgroup $k$ receives $M_k = \lfloor M \cdot N_k / N \rfloor$ slots, where the target coreset size $M$ is inherited from the global \texttt{coreset\_sampling\_ratio} = 0.1. While the formulation in Step 3 describes a per-subgroup $k$-Center selection to ensure intra-group diversity, in practice we adopt uniform random sampling within each subgroup to reduce computational overhead. This approximation is justified because diversity is already enforced by the upstream per-group $k$-Center step performed prior to server aggregation, which satisfies the global coverage objective.
 
 \begin{figure}[htbp]
     \centering
@@ -960,7 +960,6 @@ Despite this strong imbalance, the model achieves perfect discrimination between
         \hline
         Image ROC AUC & 1.000 \\
         Image AP & 1.000 \\
-        Pixel ROC AUC & NaN \\
         Pixel AP & 1.000 \\
         Total Test Images & 136 \\
         \hline
@@ -984,7 +983,6 @@ The model achieves strong image-level performance, demonstrating robustness to v
         \hline
         Image ROC AUC & 0.921 \\
         Image AP & 0.639 \\
-        Pixel ROC AUC & NaN \\
         Pixel AP & 0.639 \\
         Total Test Images & 33 \\
         \hline
@@ -1007,7 +1005,6 @@ The Radiateur dataset is characterized by subtle defects and visually complex as
         \hline
         Image ROC AUC & 0.706 \\
         Image AP & 0.596 \\
-        Pixel ROC AUC & NaN \\
         Pixel AP & 0.596 \\
         Total Test Images & 38 \\
         \hline
