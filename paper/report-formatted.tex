@@ -69,19 +69,80 @@ In this work we position PatchCore as a practical baseline for industrial inspec
 
 \section{Related Work}
 
-Most anomaly detection models are built upon the ability to learn representations inherent to the nominal (non-defective) data distribution. This task is often framed as a cold-start or one-class classification (OCC) problem, requiring distinction between samples drawn from the training data distribution and outliers outside its support.
-
-Classical approaches to learning the nominal distribution often leverage autoencoding methods \cite{Sakurada2014} or Generative Adversarial Networks (GANs). Extensions to autoencoding models include the use of Gaussian mixture models, structural objectives , or enforcing robustness of hidden features against reconstruction reintroduction. Once nominal representations are learned, anomaly detection can be performed by calculating reconstruction errors \cite{Sakurada2014}, measuring distances to k nearest neighbours (kNN), or by fine-tuning one-class classification models, such as Support Vector Data Description (SVDD) \cite{Tax2004} or OC-SVMs, on top of these features.
+Anomaly detection in industrial visual inspection is most commonly
+framed as a one-class classification (OCC) or cold-start problem: the
+model is trained exclusively on nominal (defect-free) images and must
+flag any deviation from the learned distribution at test time. Classical
+approaches exploit autoencoder reconstruction errors~\cite{Sakurada2014},
+Generative Adversarial Networks, or one-class classifiers such as
+Support Vector Data Description (SVDD)~\cite{Tax2004} and OC-SVMs
+applied on top of learned features.
 
 \subsection{Industrial Anomaly Detection via Deep Features}
 
-While the general anomaly detection literature is extensive, industrial image data presents unique challenges. Recent state-of-the-art methods in industrial anomaly detection have emerged by utilizing models pretrained on large external natural image datasets like ImageNet without requiring adaptation to the target data. The success of these non-adaptive methods relies on feature matching between the test sample and nominal samples, exploiting the multi-scale nature of deep feature representations for both fine-grained segmentation and structural anomaly detection.
+Recent state-of-the-art methods bypass task-specific training altogether
+by leveraging features from networks pretrained on large natural-image
+corpora (e.g., ImageNet). These \emph{non-adaptive} approaches perform
+anomaly detection through feature matching between test and nominal
+samples, exploiting the multi-scale nature of deep representations for
+both fine-grained segmentation and structural anomaly detection. We
+briefly review the most relevant lines of work below.
 
-The method proposed in this paper, PatchCore, extends this line of work and is most closely related to SPADE \cite{Cohen2020} and PaDiM \cite{Defard2021}.
+\paragraph{Flow-based methods.}
+CFlow~\cite{Gudovskiy2022} employs normalizing flows in a multi-scale
+pooling architecture to transform anomaly-free patch distributions into
+Gaussian distributions. While CFlow achieves 98.2\% image-level AUROC on
+MVTec~AD, the method is highly sensitive to weight initialisation: on the
+AutoVI benchmark its per-category AUROC varies from 33.1 to 87.8 across
+repeated runs~\citep{Carvalho2024AutoVI}.
+
+\paragraph{Reconstruction-based methods.}
+DRAEM~\cite{Zavrtanik2021} injects synthetic defects via Perlin noise
+and trains an autoencoder to reconstruct the defect-free image, paired
+with a segmentation head that localises the anomalous region.
+DSR~\cite{Zavrtanik2022} extends this idea by operating in a discretised
+latent space, producing higher-quality synthetic defects. On AutoVI, DSR
+achieves the strongest results on \texttt{pipe\_staple} (mean TPR of
+82.7\% at 95\% TNR), yet records the lowest AUROC of all tested methods on
+\texttt{underbody\_pipes} due to its inability to handle large, complex
+scenes with relatively small defects~\citep{Carvalho2024AutoVI}.
+
+\paragraph{Student--teacher methods.}
+EfficientAD~\cite{Batzner2024} combines a student--teacher network with
+an autoencoder branch, enabling the simultaneous detection of local
+structural defects and global logical anomalies. It achieves 99.1\% AUROC
+on MVTec~AD and 90.7\% on MVTec~LOCO. On AutoVI, however, EfficientAD
+does not exceed 10\% TPR at 99\% TNR in any category, mainly because its
+normalisation step is calibrated on only 5\% of the training data, which is
+insufficient for the high intra-class variability present in the
+automotive categories~\citep{Carvalho2024AutoVI}.
+
+\paragraph{Patch-based methods.}
+PaDiM~\cite{Defard2021} models each patch position as a multivariate
+Gaussian over pretrained feature activations, scoring anomalies via
+Mahalanobis distance. It achieves the best AUROC among all benchmarked methods on AutoVI's
+\texttt{engine\_wiring} category (mean AUROC 79.2\%), likely due to
+its reported resilience to small rotational variations, but collapses to
+chance level on \texttt{tank\_screw} (AUROC ${\approx}$50\%)~\citep{Carvalho2024AutoVI}.
+
+\subsection{PatchCore}
+
+Our entire codebase is built upon \textbf{PatchCore}~\citep{Roth2022TotalRecall},
+which we regard as the strongest single-model baseline for memory-bank
+anomaly detection. PatchCore constructs a memory bank of
+\emph{neighbourhood-aware patch-level features} extracted from
+intermediate layers of a pretrained Wide ResNet-50 backbone.
+It is most closely related to SPADE~\cite{Cohen2020} and PaDiM~\cite{Defard2021}:
 
 \begin{itemize}
-    \item \textbf{SPADE} \cite{Cohen2020}: This approach utilizes memory banks composed of nominal features extracted from various feature hierarchies of a pretrained backbone network. It relies on kNN-based methods for anomaly segmentation and image-level detection.
-    \item \textbf{PaDiM} \cite{Defard2021}: This framework employs a locally constrained bag-of-features approach to estimate patch-level feature distribution moments (mean and covariance). Anomaly measurement is then calculated using Mahalanobis distance measures specific to each patch.
+    \item \textbf{SPADE}~\cite{Cohen2020}: utilises memory banks
+    composed of nominal features extracted from various feature hierarchies
+    of a pretrained backbone, relying on kNN-based methods for anomaly
+    segmentation and image-level detection.
+    \item \textbf{PaDiM}~\cite{Defard2021}: employs a locally constrained
+    bag-of-features approach to estimate patch-level feature distribution
+    moments (mean and covariance), with anomaly measurement computed via
+    Mahalanobis distance specific to each patch.
 \end{itemize}
 
 The core principle of PatchCore involves improving upon these predecessors by employing a memory bank of \textbf{neighborhood-aware patch-level features} to retain more nominal context and incorporate a better inductive bias. Furthermore, PatchCore addresses the computational challenges of large memory banks, a known issue for methods like SPADE, by introducing \textbf{greedy coreset subsampling} to reduce redundancy, storage memory, and significantly decrease inference time. This approach is specifically designed to maximize nominal information at test time while retaining high inference speeds \citep{Roth2022TotalRecall}.
@@ -837,6 +898,75 @@ We implement the following enhancements for interpretability:
 
 \FloatBarrier
 
+To qualitatively assess the separability of nominal and anomalous samples
+in the learned feature space, we apply t-distributed Stochastic Neighbour
+Embedding (t-SNE)~\cite{vanderMaaten2008} to reduce the high-dimensional
+PatchCore memory-bank representations to three dimensions. For each
+client--category pair in the federated setup, we extract the
+1\,536-dimensional patch-level feature vectors for every test image (both
+\emph{Good} and \emph{Bad}) and project them into a 3D space using t-SNE
+with default perplexity. The resulting point clouds are visualised as
+interactive 3D scatter plots (Figure~\ref{fig:tsne_ew}),
+where green markers denote nominal (Good) samples and red markers denote
+anomalous (Bad) samples.
+
+The visualisations reveal that the degree of cluster separation varies
+substantially across categories. Categories such as
+\texttt{underbody\_pipes} and \texttt{underbody\_screw} exhibit clear
+spatial separation between the Good and Bad clusters, consistent with
+their strong image-level AUROC scores. In contrast, categories like
+\texttt{engine\_wiring} and \texttt{pipe\_clip} show considerable overlap
+between the two distributions, reflecting the difficulty of distinguishing
+logical defects and small structural anomalies from nominal variability in
+the feature space.
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/tsne_engine_wiring.png}
+        \caption*{(a) engine\_wiring (Client 1)}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/tsne_pipe_clip.png}
+        \caption*{(b) pipe\_clip (Client 1)}
+    \end{minipage}
+
+    \vspace{0.5em}
+
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/tsne_pipe_staple.png}
+        \caption*{(c) pipe\_staple (Client 2)}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/tsne_tank_screw.png}
+        \caption*{(d) tank\_screw (Client 2)}
+    \end{minipage}
+
+    \vspace{0.5em}
+
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/tsne_underbody_pipes.png}
+        \caption*{(e) underbody\_pipes (Client 3)}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/tsne_underbody_screw.png}
+        \caption*{(f) underbody\_screw (Client 3)}
+    \end{minipage}
+
+    \caption{3D t-SNE projections of PatchCore memory-bank features for
+    each category under the federated setup. Green: Good (nominal)
+    samples; Red: Bad (anomalous) samples.}
+    \label{fig:tsne_ew}
+\end{figure}
 
 
 \subsection{Robustness}
